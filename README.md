@@ -2,7 +2,7 @@
 
 Android-Actionspiel: Waffenplattform fährt automatisch eine Bahn entlang, der Spieler lenkt, wählt Tore und baut zwischen den Läufen ein modulares Arsenal auf.
 
-Status: Vorproduktion (Meilenstein M0). Noch nicht spielbar.
+Status: Prototyp (Meilenstein M1). Ein Level mit Boss ist spielbar, Grafik und Werte sind vorläufig.
 
 Vollständiges Konzept: [PROJEKTPLAN.md](PROJEKTPLAN.md)
 
