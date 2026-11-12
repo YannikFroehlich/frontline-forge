@@ -37,6 +37,7 @@ class Enemy:
 	var speed := 0.0
 	var radius := 0.0
 	var damage := 0
+	var coins := 0
 	var pulse := 0.0
 	var timer := 0.0
 	var target_x := 0.0
@@ -68,6 +69,7 @@ var _stats := WeaponStats.new()
 var _shield := MAX_SHIELD
 var _invulnerable := 0.0
 var _kills := 0
+var _coins := 0
 var _target_x := 0.0
 var _fire_cooldown := 0.0
 
@@ -117,6 +119,7 @@ func _ready() -> void:
 	_hud.restart_pressed.connect(get_tree().reload_current_scene)
 	_hud.set_shield(_shield, MAX_SHIELD)
 	_hud.set_stats(_stats)
+	_hud.set_coins(_coins)
 
 
 func _exit_tree() -> void:
@@ -267,6 +270,7 @@ func _spawn_enemies(event: Dictionary, z: float) -> void:
 		enemy.speed = def["speed"]
 		enemy.radius = def["radius"]
 		enemy.damage = def["damage"]
+		enemy.coins = def["coins"]
 		enemy.timer = randf_range(0.5, 1.5)
 		enemy.node = RunArt.enemy(kind)
 		var column := i % columns
@@ -320,6 +324,7 @@ func _damage_enemy(enemy: Enemy, amount: float) -> void:
 	enemy.pulse = 1.0
 	if enemy.hp <= 0.0:
 		_kills += 1
+		_add_coins(enemy.coins)
 		_explode(enemy.node.position)
 		_remove_enemy(enemy)
 
@@ -491,6 +496,7 @@ func _update_orbs(delta: float) -> void:
 
 func _win() -> void:
 	_state = State.WON
+	_add_coins(LevelData.BOSS_COINS + LevelData.WIN_COINS)
 	for offset: Vector3 in [Vector3.ZERO, Vector3(-1.5, 0.5, 0.0), Vector3(1.5, -0.3, 0.0), Vector3(0.0, 1.0, 0.5)]:
 		_explode(_boss.position + offset)
 	_boss.queue_free()
@@ -513,12 +519,27 @@ func _lose() -> void:
 	_show_result_later(false)
 
 
+func _add_coins(amount: int) -> void:
+	_coins += amount
+	_hud.set_coins(_coins)
+
+
+## Books the run into the save before the result appears, so closing the app then loses nothing.
+## Aborting with the back button gives nothing.
 func _show_result_later(won: bool) -> void:
-	var minutes := floori(_time / 60.0)
-	var text := "Zeit %d:%02d\nZerstört %d\nSchild %d/%d\nSchaden pro Sekunde %s" % [
-		minutes, int(_time) % 60, _kills, maxi(_shield, 0), MAX_SHIELD, WeaponStats.format_number(roundf(_stats.dps()))]
+	var new_best: bool = Save.record_run(Save.data, _level["id"], won, _coins, _kills, _time)
+	Save.save()
+	var lines: PackedStringArray = [
+		"Zeit %s%s" % [_format_time(_time), "  · neue Bestzeit" if new_best else ""],
+		"Zerstört %d · Schild %d/%d" % [_kills, maxi(_shield, 0), MAX_SHIELD],
+		"Schaden pro Sekunde %s" % WeaponStats.format_number(roundf(_stats.dps())),
+	]
 	await get_tree().create_timer(1.2).timeout
-	_hud.show_result(won, text)
+	_hud.show_result(won, _coins, int(Save.data["coins"]), "\n".join(lines))
+
+
+static func _format_time(seconds: float) -> String:
+	return "%d:%02d" % [floori(seconds / 60.0), int(seconds) % 60]
 
 
 # --- Scenery ----------------------------------------------------------------

@@ -15,6 +15,7 @@ boot_splash/show_image=false
 [autoload]
 
 Updates="*res://src/services/update_service.gd"
+Save="*res://src/services/save_service.gd"
 
 [debug]
 
