@@ -29,6 +29,8 @@ func _ready() -> void:
 
 ## Silent on any failure (offline, rate limit, no release): the game must not depend on it.
 func check() -> void:
+	if OS.has_feature("dev"):
+		return  # Dev builds have their own package name and are not updated from releases.
 	var response := await _fetch(LATEST_URL, ["Accept: application/vnd.github+json"])
 	if not response["ok"]:
 		return
@@ -108,7 +110,7 @@ static func parse_release(data: Dictionary, current_version: String) -> Dictiona
 	return result
 
 
-## GitHub's generated release notes as plain text: no headings, links, authors or changelog line.
+## GitHub's generated release notes as plain text: no headings, links, authors, changelog or release-PR line.
 static func clean_notes(markdown: String) -> String:
 	var by_author := RegEx.create_from_string(" by @\\S+ in https?://\\S+$")
 	var lines: PackedStringArray = []
@@ -120,6 +122,8 @@ static func clean_notes(markdown: String) -> String:
 		line = by_author.sub(line, "")
 		if line.begins_with("* ") or line.begins_with("- "):
 			line = "• " + line.substr(2)
+		if line.begins_with("• Release v"):
+			continue  # The develop -> main pull request itself, says nothing new.
 		lines.append(line)
 	return "\n".join(lines)
 

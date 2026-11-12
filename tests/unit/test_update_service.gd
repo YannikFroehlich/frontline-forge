@@ -49,6 +49,11 @@ func test_generated_notes_become_plain_text() -> void:
 	check_eq(UpdateService.clean_notes(body), "• feat: Update aus der App\n• fix: Absturz behoben", "Bereinigt")
 
 
+func test_release_pull_request_line_is_dropped() -> void:
+	var body := "* feat: Kernspiel by @a in https://github.com/x/y/pull/11\n* Release v0.1.0 by @a in https://github.com/x/y/pull/13"
+	check_eq(UpdateService.clean_notes(body), "• feat: Kernspiel", "Release-Zeile entfernt")
+
+
 func test_sha256_file_is_parsed() -> void:
 	check_eq(UpdateService.parse_sha256("%s  frontline-forge-0.0.2.apk\n" % HASH.to_upper()), HASH, "sha256sum-Zeile")
 	check_eq(UpdateService.parse_sha256(""), "", "Leer")
