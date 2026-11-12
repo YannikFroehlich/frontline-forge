@@ -34,13 +34,13 @@ Dann in Android Studio: **More Actions → SDK Manager → SDK Tools**, Haken be
 
 ## 3. Exakte SDK-Pakete für Godot
 
-In PowerShell (eine Zeile):
+`sdkmanager` ist inzwischen veraltet und leitet an die neue Android CLI weiter, die Paketnamen mit `/` statt `;` erwartet. Direkt die Android CLI verwenden (eine Zeile):
 
 ```powershell
-& "$env:LOCALAPPDATA\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat" "platform-tools" "build-tools;35.0.1" "platforms;android-35" "cmdline-tools;latest" "cmake;3.10.2.4988404" "ndk;28.1.13356709"
+& "$env:LOCALAPPDATA\Android\Sdk\cmdline-tools\latest\bin\android.exe" sdk install build-tools/35.0.1 platforms/android-35 cmake/3.10.2.4988404 ndk/28.1.13356709 platform-tools
 ```
 
-Lizenzabfragen mit `y` bestätigen.
+Eine Lizenzabfrage gibt es nicht mehr. Falls `platform-tools` mit „Failed to extract … adb.exe“ scheitert, läuft `adb` noch (Android Studio schließen oder `adb kill-server`). Ist `platform-tools` bereits installiert, kann es weggelassen werden.
 
 ## 4. Godot einstellen
 
