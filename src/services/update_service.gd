@@ -114,7 +114,8 @@ static func clean_notes(markdown: String) -> String:
 	var lines: PackedStringArray = []
 	for raw: String in markdown.replace("\r", "").split("\n"):
 		var line := raw.strip_edges()
-		if line == "" or line.begins_with("#") or line.contains("Full Changelog"):
+		if line == "" or line.begins_with("#") or line.contains("Full Changelog") \
+				or line.contains("made their first contribution"):
 			continue
 		line = by_author.sub(line, "")
 		if line.begins_with("* ") or line.begins_with("- "):
