@@ -86,7 +86,7 @@ var _distance := 0.0
 var _scroll := SPEED
 var _state := State.RUNNING
 var _time := 0.0
-var _stats := WeaponStats.from_loadout(Save.data["loadout"])
+var _stats := Arsenal.equipped_stats(Save.data)
 var _shield := MAX_SHIELD
 var _invulnerable := 0.0
 var _kills := 0
@@ -141,6 +141,7 @@ func _ready() -> void:
 	add_child(_hud)
 	_hud.back_pressed.connect(_go_back)
 	_hud.restart_pressed.connect(get_tree().reload_current_scene)
+	_hud.arsenal_pressed.connect(get_tree().change_scene_to_file.bind("res://scenes/arsenal.tscn"))
 	_hud.set_shield(_shield, MAX_SHIELD)
 	_hud.set_stats(_stats)
 	_hud.set_coins(_coins)

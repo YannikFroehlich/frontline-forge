@@ -10,7 +10,7 @@ extends Control
 @onready var _later_button: Button = %LaterButton
 @onready var _browser_button: Button = %BrowserButton
 @onready var _play_button: Button = %PlayButton
-@onready var _weapon_button: Button = %WeaponButton
+@onready var _arsenal_button: Button = %ArsenalButton
 
 
 func _ready() -> void:
@@ -23,7 +23,7 @@ func _ready() -> void:
 	_later_button.pressed.connect(_on_later_pressed)
 	_browser_button.pressed.connect(Updates.open_release_page)
 	_play_button.pressed.connect(get_tree().change_scene_to_file.bind("res://scenes/run.tscn"))
-	_weapon_button.pressed.connect(get_tree().change_scene_to_file.bind("res://scenes/loadout.tscn"))
+	_arsenal_button.pressed.connect(get_tree().change_scene_to_file.bind("res://scenes/arsenal.tscn"))
 	Updates.check()
 
 
