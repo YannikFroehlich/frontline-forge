@@ -6,7 +6,7 @@ config_version=5
 [application]
 
 config/name="Frontline Forge"
-run/main_scene="res://scenes/boot.tscn"
+run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 boot_splash/bg_color=Color(0.043, 0.063, 0.125, 1)
@@ -40,3 +40,7 @@ renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
 textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.043, 0.063, 0.125, 1)
+
+[gui]
+
+theme/custom="res://assets/ui/theme.tres"
