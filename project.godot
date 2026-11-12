@@ -12,6 +12,10 @@ config/icon="res://icon.svg"
 boot_splash/bg_color=Color(0.043, 0.063, 0.125, 1)
 boot_splash/show_image=false
 
+[autoload]
+
+Updates="*res://src/services/update_service.gd"
+
 [debug]
 
 gdscript/warnings/untyped_declaration=2

@@ -1,7 +1,50 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://src/ui/boot.gd" id="1_boot"]
 [ext_resource type="Texture2D" path="res://icon.svg" id="2_icon"]
+
+[sub_resource type="StyleBoxFlat" id="panel_style"]
+content_margin_left = 32.0
+content_margin_top = 28.0
+content_margin_right = 32.0
+content_margin_bottom = 28.0
+bg_color = Color(0.102, 0.133, 0.22, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.133, 0.882, 1, 0.6)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="primary_button"]
+content_margin_left = 24.0
+content_margin_top = 18.0
+content_margin_right = 24.0
+content_margin_bottom = 18.0
+bg_color = Color(0.133, 0.882, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="secondary_button"]
+content_margin_left = 24.0
+content_margin_top = 18.0
+content_margin_right = 24.0
+content_margin_bottom = 18.0
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6, 0.65, 0.75, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="Boot" type="Control"]
 layout_mode = 3
@@ -59,3 +102,98 @@ theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 1)
 theme_override_font_sizes/font_size = 28
 text = "v?"
 horizontal_alignment = 1
+
+[node name="UpdatePanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = -360.0
+offset_right = -32.0
+offset_bottom = -48.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("panel_style")
+
+[node name="Box" type="VBoxContainer" parent="UpdatePanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 2
+
+[node name="UpdateTitle" type="Label" parent="UpdatePanel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.69, 0.125, 1)
+theme_override_font_sizes/font_size = 30
+text = "Version ? verfügbar"
+autowrap_mode = 3
+
+[node name="UpdateNotes" type="Label" parent="UpdatePanel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.84, 0.9, 1)
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 3
+max_lines_visible = 5
+text_overrun_behavior = 3
+
+[node name="UpdateStatus" type="Label" parent="UpdatePanel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.84, 0.9, 1)
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 3
+
+[node name="UpdateProgress" type="ProgressBar" parent="UpdatePanel/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+max_value = 1.0
+step = 0.001
+show_percentage = false
+
+[node name="Buttons" type="HBoxContainer" parent="UpdatePanel/Box"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LaterButton" type="Button" parent="UpdatePanel/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.8, 0.84, 0.9, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("secondary_button")
+theme_override_styles/hover = SubResource("secondary_button")
+theme_override_styles/pressed = SubResource("secondary_button")
+theme_override_styles/disabled = SubResource("secondary_button")
+text = "Später"
+
+[node name="UpdateButton" type="Button" parent="UpdatePanel/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.043, 0.063, 0.125, 1)
+theme_override_colors/font_disabled_color = Color(0.043, 0.063, 0.125, 0.5)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("primary_button")
+theme_override_styles/hover = SubResource("primary_button")
+theme_override_styles/pressed = SubResource("primary_button")
+theme_override_styles/disabled = SubResource("primary_button")
+text = "Aktualisieren"
+
+[node name="BrowserButton" type="Button" parent="UpdatePanel/Box"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.133, 0.882, 1, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("secondary_button")
+theme_override_styles/hover = SubResource("secondary_button")
+theme_override_styles/pressed = SubResource("secondary_button")
+text = "Im Browser öffnen"
