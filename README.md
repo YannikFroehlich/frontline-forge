@@ -21,7 +21,14 @@ Die aktuelle APK liegt unter [Releases](../../releases/latest). Auf Android „I
 
 Die Version steht ausschließlich in [version.txt](version.txt) und muss vor jedem Pull Request nach `main` erhöht werden.
 
-Technik: Godot 4, GDScript. Bauanleitung folgt mit dem ersten Godot-Projekt.
+Technik: Godot 4 (Version in [.godot-version](.godot-version)), GDScript. Einrichtung: [docs/SETUP.md](docs/SETUP.md).
+
+Debug-APK bauen und aufs angeschlossene Handy installieren:
+
+```powershell
+godot_console --headless --path . --export-debug "Android" build/frontline-forge-debug.apk
+adb install -r build/frontline-forge-debug.apk
+```
 
 ## Lizenz
 
