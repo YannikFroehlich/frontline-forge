@@ -110,7 +110,7 @@ static func parse_release(data: Dictionary, current_version: String) -> Dictiona
 	return result
 
 
-## GitHub's generated release notes as plain text: no headings, links, authors or changelog line.
+## GitHub's generated release notes as plain text: no headings, links, authors, changelog or release-PR line.
 static func clean_notes(markdown: String) -> String:
 	var by_author := RegEx.create_from_string(" by @\\S+ in https?://\\S+$")
 	var lines: PackedStringArray = []
@@ -122,6 +122,8 @@ static func clean_notes(markdown: String) -> String:
 		line = by_author.sub(line, "")
 		if line.begins_with("* ") or line.begins_with("- "):
 			line = "• " + line.substr(2)
+		if line.begins_with("• Release v"):
+			continue  # The develop -> main pull request itself, says nothing new.
 		lines.append(line)
 	return "\n".join(lines)
 
