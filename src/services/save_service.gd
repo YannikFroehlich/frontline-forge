@@ -32,6 +32,8 @@ static func default_data() -> Dictionary:
 		"stats": {"runs": 0, "wins": 0, "kills": 0},
 		"levels": {},
 		"loadout": Parts.DEFAULT_LOADOUT.duplicate(),
+		"owned": Arsenal.starter_owned(),
+		"upgrades": {},
 	}
 
 

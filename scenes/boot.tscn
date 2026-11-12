@@ -117,7 +117,7 @@ theme_override_styles/hover = SubResource("primary_button")
 theme_override_styles/pressed = SubResource("primary_button")
 text = "Spielen"
 
-[node name="WeaponButton" type="Button" parent="Center"]
+[node name="ArsenalButton" type="Button" parent="Center"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(360, 80)
 layout_mode = 2
@@ -127,7 +127,7 @@ theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("secondary_button")
 theme_override_styles/hover = SubResource("secondary_button")
 theme_override_styles/pressed = SubResource("secondary_button")
-text = "Waffe"
+text = "Arsenal"
 
 [node name="UpdatePanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true

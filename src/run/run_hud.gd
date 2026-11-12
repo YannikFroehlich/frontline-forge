@@ -5,6 +5,7 @@ extends CanvasLayer
 
 signal back_pressed
 signal restart_pressed
+signal arsenal_pressed
 
 const TEXT := Color(0.8, 0.84, 0.9)
 const DIM := Color(0.6, 0.65, 0.75)
@@ -155,8 +156,8 @@ func _build_result() -> void:
 	_result.set_anchors_preset(Control.PRESET_CENTER)
 	_result.offset_left = -300.0
 	_result.offset_right = 300.0
-	_result.offset_top = -300.0
-	_result.offset_bottom = 300.0
+	_result.offset_top = -350.0
+	_result.offset_bottom = 350.0
 	var style := StyleBoxFlat.new()
 	style.bg_color = PANEL
 	style.border_color = Color(RunArt.CYAN, 0.6)
@@ -186,6 +187,9 @@ func _build_result() -> void:
 	var again := _button("Nochmal", true)
 	again.pressed.connect(restart_pressed.emit)
 	box.add_child(again)
+	var arsenal := _button("Arsenal", false)
+	arsenal.pressed.connect(arsenal_pressed.emit)
+	box.add_child(arsenal)
 	var menu := _button("Menü", false)
 	menu.pressed.connect(back_pressed.emit)
 	box.add_child(menu)

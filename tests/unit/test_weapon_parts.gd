@@ -16,7 +16,7 @@ func test_counts_match_plan() -> void:
 
 func test_every_part_is_valid() -> void:
 	var known := WeaponStats.MUL_KEYS + WeaponStats.ADD_KEYS + WeaponStats.MAX_KEYS \
-			+ ["name", "desc", "color", "damage", "fire_rate", "projectiles", "range"]
+			+ ["name", "desc", "price", "color", "damage", "fire_rate", "projectiles", "range"]
 	for slot: String in Parts.SLOTS:
 		for id: String in Parts.table(slot):
 			var part: Dictionary = Parts.table(slot)[id]
