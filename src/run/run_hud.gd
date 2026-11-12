@@ -164,6 +164,7 @@ func _build_result() -> void:
 	_result = _overlay_panel(350.0)
 	var box := _result.get_child(0) as VBoxContainer
 	_result_title = _label(40, RunArt.GREEN)
+	_result_title.theme_type_variation = "TitleLabel"
 	_result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_result_title)
 	_result_coins = _label(56, RunArt.AMBER)
@@ -191,6 +192,7 @@ func _build_pause() -> void:
 	_pause = _overlay_panel(240.0)
 	var box := _pause.get_child(0) as VBoxContainer
 	var title := _label(44, RunArt.CYAN)
+	title.theme_type_variation = "TitleLabel"
 	title.text = "PAUSE"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)

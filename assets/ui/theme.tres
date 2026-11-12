@@ -1,4 +1,7 @@
-[gd_resource type="Theme" load_steps=14 format=3]
+[gd_resource type="Theme" load_steps=16 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/Inter.ttf" id="inter"]
+[ext_resource type="FontFile" path="res://assets/fonts/Rajdhani-SemiBold.ttf" id="rajdhani"]
 
 [sub_resource type="StyleBoxFlat" id="panel"]
 content_margin_left = 16.0
@@ -146,6 +149,7 @@ content_margin_bottom = 14.0
 [sub_resource type="StyleBoxEmpty" id="empty"]
 
 [resource]
+default_font = ExtResource("inter")
 default_font_size = 26
 Button/colors/font_color = Color(0.8, 0.84, 0.9, 1)
 Button/colors/font_disabled_color = Color(0.6, 0.65, 0.75, 0.5)
@@ -203,3 +207,7 @@ TabButton/styles/pressed = SubResource("tab_selected")
 TitleLabel/base_type = &"Label"
 TitleLabel/colors/font_color = Color(0.133, 0.882, 1, 1)
 TitleLabel/font_sizes/font_size = 44
+PrimaryButton/fonts/font = ExtResource("rajdhani")
+TabButton/fonts/font = ExtResource("rajdhani")
+TitleLabel/fonts/font = ExtResource("rajdhani")
+CoinLabel/fonts/font = ExtResource("rajdhani")
