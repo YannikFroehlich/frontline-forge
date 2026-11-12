@@ -23,11 +23,11 @@ Die Version steht ausschließlich in [version.txt](version.txt) und muss vor jed
 
 Technik: Godot 4 (Version in [.godot-version](.godot-version)), GDScript. Einrichtung: [docs/SETUP.md](docs/SETUP.md).
 
-Debug-APK bauen und aufs angeschlossene Handy installieren:
+Testversion bauen und aufs angeschlossene Handy installieren. Sie heißt „Frontline Forge Dev“, hat einen eigenen Paketnamen, läuft neben der Release-Version und prüft nicht auf Updates:
 
 ```powershell
-godot_console --headless --path . --export-debug "Android" build/frontline-forge-debug.apk
-adb install -r build/frontline-forge-debug.apk
+godot_console --headless --path . --export-debug "Android Dev" build/frontline-forge-dev.apk
+adb install -r build/frontline-forge-dev.apk
 ```
 
 Tests ausführen (laufen auch automatisch bei jedem Pull Request):
