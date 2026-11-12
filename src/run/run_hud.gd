@@ -21,6 +21,9 @@ var _fps: Label
 var _result: PanelContainer
 var _result_title: Label
 var _result_text: Label
+var _result_coins: Label
+var _result_total: Label
+var _coins: Label
 
 
 func _ready() -> void:
@@ -46,6 +49,15 @@ func _ready() -> void:
 	_shield.offset_top = 66.0
 	_shield.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_shield)
+
+	_coins = _label(28, RunArt.AMBER)
+	_coins.anchor_left = 1.0
+	_coins.anchor_right = 1.0
+	_coins.offset_left = -170.0
+	_coins.offset_right = -24.0
+	_coins.offset_top = 116.0
+	_coins.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	add_child(_coins)
 
 	_boss_title = _label(26, RunArt.MAGENTA)
 	_boss_title.text = "WÄCHTER"
@@ -123,11 +135,17 @@ func toast(text: String, color: Color) -> void:
 	_toast_time = 1.6
 
 
-func show_result(won: bool, text: String) -> void:
+func set_coins(value: int) -> void:
+	_coins.text = "◆ %d" % value
+
+
+func show_result(won: bool, earned: int, total: int, text: String) -> void:
 	_boss_title.hide()
 	_boss_bar.hide()
 	_result_title.text = "SEKTOR GESICHERT" if won else "PLATTFORM ZERSTÖRT"
 	_result_title.add_theme_color_override("font_color", RunArt.GREEN if won else RunArt.RED)
+	_result_coins.text = "+%d ◆" % earned
+	_result_total.text = "Gesamt %d Münzen" % total
 	_result_text.text = text
 	_result.show()
 
@@ -137,8 +155,8 @@ func _build_result() -> void:
 	_result.set_anchors_preset(Control.PRESET_CENTER)
 	_result.offset_left = -300.0
 	_result.offset_right = 300.0
-	_result.offset_top = -220.0
-	_result.offset_bottom = 220.0
+	_result.offset_top = -300.0
+	_result.offset_bottom = 300.0
 	var style := StyleBoxFlat.new()
 	style.bg_color = PANEL
 	style.border_color = Color(RunArt.CYAN, 0.6)
@@ -156,7 +174,13 @@ func _build_result() -> void:
 	_result_title = _label(40, RunArt.GREEN)
 	_result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_result_title)
-	_result_text = _label(26, TEXT)
+	_result_coins = _label(56, RunArt.AMBER)
+	_result_coins.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_result_coins)
+	_result_total = _label(24, DIM)
+	_result_total.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_result_total)
+	_result_text = _label(24, TEXT)
 	_result_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_result_text)
 	var again := _button("Nochmal", true)
