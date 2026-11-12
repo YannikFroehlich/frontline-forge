@@ -45,7 +45,7 @@ func test_prerelease_and_draft_are_ignored() -> void:
 
 
 func test_generated_notes_become_plain_text() -> void:
-	var body := "## What's Changed\r\n* feat: Update aus der App by @someone in https://github.com/x/y/pull/5\r\n* fix: Absturz behoben by @someone in https://github.com/x/y/pull/6\r\n\r\n\r\n**Full Changelog**: https://github.com/x/y/compare/v0.0.1...v0.0.2"
+	var body := "## What's Changed\r\n* feat: Update aus der App by @someone in https://github.com/x/y/pull/5\r\n* fix: Absturz behoben by @someone in https://github.com/x/y/pull/6\r\n\r\n## New Contributors\r\n* @someone made their first contribution in https://github.com/x/y/pull/1\r\n\r\n**Full Changelog**: https://github.com/x/y/compare/v0.0.1...v0.0.2"
 	check_eq(UpdateService.clean_notes(body), "• feat: Update aus der App\n• fix: Absturz behoben", "Bereinigt")
 
 
