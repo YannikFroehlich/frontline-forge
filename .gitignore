@@ -1,0 +1,32 @@
+# Godot
+.godot/
+.import/
+*.translation
+export_credentials.cfg
+
+# Build output
+build/
+*.apk
+*.aab
+*.idsig
+
+# Signing keys and secrets: never commit
+*.keystore
+*.jks
+*.p12
+*.pem
+.env
+local.properties
+
+# Android plugin build
+android/plugins/*/build/
+android/plugins/*/.gradle/
+android/build/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.tmp
