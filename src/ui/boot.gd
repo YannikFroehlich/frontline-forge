@@ -9,6 +9,7 @@ extends Control
 @onready var _update_button: Button = %UpdateButton
 @onready var _later_button: Button = %LaterButton
 @onready var _browser_button: Button = %BrowserButton
+@onready var _sample_button: Button = %SampleButton
 
 
 func _ready() -> void:
@@ -20,6 +21,7 @@ func _ready() -> void:
 	_update_button.pressed.connect(_on_update_pressed)
 	_later_button.pressed.connect(_on_later_pressed)
 	_browser_button.pressed.connect(Updates.open_release_page)
+	_sample_button.pressed.connect(get_tree().change_scene_to_file.bind("res://scenes/style_sample.tscn"))
 	Updates.check()
 
 

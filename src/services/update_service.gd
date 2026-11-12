@@ -29,6 +29,8 @@ func _ready() -> void:
 
 ## Silent on any failure (offline, rate limit, no release): the game must not depend on it.
 func check() -> void:
+	if OS.has_feature("dev"):
+		return  # Dev builds have their own package name and are not updated from releases.
 	var response := await _fetch(LATEST_URL, ["Accept: application/vnd.github+json"])
 	if not response["ok"]:
 		return
