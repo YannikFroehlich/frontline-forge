@@ -15,11 +15,17 @@ const STEER_SPEED := 18.0
 const PLAYER_RADIUS := 0.7
 const MAX_SHIELD := 3
 const INVULNERABLE_TIME := 1.0
-const BULLET_SPEED := 40.0
-const BULLET_RANGE := 45.0
 const BULLET_SPACING := 0.35
 const BULLET_HEIGHT := 0.65
-const MAX_BULLETS := 256
+const BULLET_HIT_RADIUS := 0.12
+const MAX_BULLETS := 320
+const BURST_INTERVAL := 0.07
+const CRIT_MULTIPLIER := 2.5
+const CHAIN_RANGE := 3.5
+const BOUNCE_RANGE := 12.0
+const SLOW_TIME := 1.5
+const SPLIT_ANGLE := 0.5
+const SPLIT_DAMAGE := 0.4
 const MUZZLE_Z := -2.0
 const BOSS_STOP_Z := -22.0
 const BOSS_HALF_WIDTH := 2.4
@@ -41,6 +47,21 @@ class Enemy:
 	var pulse := 0.0
 	var timer := 0.0
 	var target_x := 0.0
+	var slow_time := 0.0
+
+
+class Bullet:
+	var pos := Vector3.ZERO
+	var vel := Vector3.ZERO
+	var damage := 0.0
+	var radius := 0.0
+	var age := 0.0
+	var travelled := 0.0
+	var pierce := 0
+	var bounce := 0
+	var split := false
+	## Enemy hit last. Skipped so a piercing or bouncing projectile does not hit it twice.
+	var last_hit: Enemy
 
 
 class Gate:
@@ -65,15 +86,18 @@ var _distance := 0.0
 var _scroll := SPEED
 var _state := State.RUNNING
 var _time := 0.0
-var _stats := WeaponStats.new()
+var _stats := WeaponStats.from_loadout(Save.data["loadout"])
 var _shield := MAX_SHIELD
 var _invulnerable := 0.0
 var _kills := 0
 var _coins := 0
 var _target_x := 0.0
 var _fire_cooldown := 0.0
+var _burst_left := 0
+var _burst_timer := 0.0
+var _leech_count := 0
 
-var _bullets := PackedVector3Array()
+var _bullets: Array[Bullet] = []
 var _enemies: Array[Enemy] = []
 var _gates: Array[Gate] = []
 var _orbs: Array[Node3D] = []
@@ -105,7 +129,7 @@ func _ready() -> void:
 	add_child(_platform)
 	_flash = _platform.get_node("Muzzle/Flash") as OmniLight3D
 	_core_mat = (_platform.get_node("Core") as MeshInstance3D).material_override as StandardMaterial3D
-	_bullet_mesh = RunArt.bullets(MAX_BULLETS)
+	_bullet_mesh = RunArt.bullets(MAX_BULLETS, _stats.color)
 	add_child(_bullet_mesh)
 	for color: Color in [RunArt.MAGENTA, RunArt.MAGENTA, RunArt.MAGENTA, RunArt.AMBER, RunArt.LIME,
 			RunArt.MAGENTA, RunArt.MAGENTA, RunArt.CYAN]:
@@ -174,15 +198,48 @@ func _update_player(delta: float) -> void:
 
 
 func _update_fire(delta: float) -> void:
+	if _burst_left > 0:
+		_burst_timer -= delta
+		if _burst_timer <= 0.0:
+			_burst_timer = BURST_INTERVAL
+			_burst_left -= 1
+			_fire_volley()
 	_fire_cooldown -= delta
 	if _fire_cooldown > 0.0:
 		return
 	_fire_cooldown = maxf(_fire_cooldown + 1.0 / _stats.fire_rate, 0.0)
-	var first_x := _platform.position.x - (_stats.projectiles - 1) * 0.5 * BULLET_SPACING
-	for i in _stats.projectiles:
-		if _bullets.size() < MAX_BULLETS:
-			_bullets.append(Vector3(first_x + i * BULLET_SPACING, BULLET_HEIGHT, MUZZLE_Z))
+	_fire_volley()
+	_burst_left = _stats.burst - 1
+	_burst_timer = BURST_INTERVAL
+
+
+## One trigger pull: projectiles side by side, or fanned out when the weapon has spread.
+func _fire_volley() -> void:
+	var count := _stats.projectiles
+	var origin := Vector3(_platform.position.x, BULLET_HEIGHT, MUZZLE_Z)
+	for i in count:
+		var offset := i - (count - 1) * 0.5
+		if _stats.spread > 0.0:
+			_spawn_bullet(origin, deg_to_rad(offset * _stats.spread), _stats.damage, _stats.split)
+		else:
+			_spawn_bullet(origin + Vector3(offset * BULLET_SPACING, 0.0, 0.0), 0.0, _stats.damage, _stats.split)
 	_flash.light_energy = 5.0
+
+
+## angle in radians from straight ahead, positive to the right. Returns null when the pool is full.
+func _spawn_bullet(pos: Vector3, angle: float, damage: float, split: bool) -> Bullet:
+	if _bullets.size() >= MAX_BULLETS:
+		return null
+	var bullet := Bullet.new()
+	bullet.pos = pos
+	bullet.vel = Vector3(sin(angle), 0.0, -cos(angle)) * _stats.speed
+	bullet.damage = damage
+	bullet.radius = BULLET_HIT_RADIUS + _stats.radius
+	bullet.pierce = _stats.pierce
+	bullet.bounce = _stats.bounce
+	bullet.split = split
+	_bullets.append(bullet)
+	return bullet
 
 
 func _hurt(amount: int) -> void:
@@ -198,43 +255,112 @@ func _hurt(amount: int) -> void:
 # --- Bullets ----------------------------------------------------------------
 
 func _update_bullets(delta: float) -> void:
-	var step := BULLET_SPEED * delta
-	var i := _bullets.size() - 1
-	while i >= 0:
+	for i in range(_bullets.size() - 1, -1, -1):
 		var bullet := _bullets[i]
-		bullet.z -= step
-		if bullet.z < -BULLET_RANGE or _bullet_hits(bullet, step):
+		bullet.age += delta
+		if _stats.homing > 0.0:
+			_steer_homing(bullet, delta)
+		var prev_z := bullet.pos.z
+		bullet.pos += bullet.vel * delta
+		if _stats.wave > 0.0:
+			bullet.pos.x += cos(bullet.age * 12.0) * _stats.wave * 12.0 * delta
+		bullet.travelled += _stats.speed * delta
+		if bullet.travelled > _stats.range_m or absf(bullet.pos.x) > 6.0 or not _bullet_survives(bullet, prev_z):
 			_bullets[i] = _bullets[_bullets.size() - 1]
 			_bullets.resize(_bullets.size() - 1)
-		else:
-			_bullets[i] = bullet
-		i -= 1
 	var multi := _bullet_mesh.multimesh
+	var basis := BULLET_BASIS.scaled(Vector3.ONE * (1.0 + _stats.radius * 3.0))
 	multi.visible_instance_count = _bullets.size()
 	for j in _bullets.size():
-		multi.set_instance_transform(j, Transform3D(BULLET_BASIS, _bullets[j]))
+		multi.set_instance_transform(j, Transform3D(basis, _bullets[j].pos))
 
 
-## step = distance flown this frame, so fast bullets cannot skip a thin gate.
-func _bullet_hits(bullet: Vector3, step: float) -> bool:
+## Swept check between last and current z, so fast projectiles cannot skip a thin target.
+## Returns false when the projectile is used up.
+func _bullet_survives(bullet: Bullet, prev_z: float) -> bool:
 	if not _playing():
-		return false
-	for enemy in _enemies:
-		var pos := enemy.node.position
-		if absf(pos.x - bullet.x) < enemy.radius and bullet.z < pos.z + enemy.radius and bullet.z + step > pos.z - enemy.radius:
-			_damage_enemy(enemy, _stats.damage)
-			return true
-	if _state == State.BOSS and absf(bullet.x - _boss.position.x) < BOSS_HALF_WIDTH and bullet.z < _boss.position.z + 1.0:
-		_damage_boss(_stats.damage)
 		return true
+	var near_z := maxf(prev_z, bullet.pos.z)
+	var far_z := minf(prev_z, bullet.pos.z)
+	for enemy in _enemies:
+		if enemy == bullet.last_hit:
+			continue
+		var pos := enemy.node.position
+		var reach := enemy.radius + bullet.radius
+		if absf(pos.x - bullet.pos.x) < reach and far_z < pos.z + reach and near_z > pos.z - reach:
+			return _bullet_hit_enemy(bullet, enemy)
+	if _state == State.BOSS and absf(bullet.pos.x - _boss.position.x) < BOSS_HALF_WIDTH + bullet.radius \
+			and far_z < _boss.position.z + 1.0:
+		_damage_boss(_roll_damage(bullet.damage))
+		return false
 	for gate in _gates:
 		var z := gate.node.position.z
-		if bullet.z <= z and bullet.z + step > z:
-			var side := 0 if bullet.x < 0.0 else 1
+		if far_z <= z and near_z > z:
+			var side := 0 if bullet.pos.x < 0.0 else 1
 			if gate.sides[side].has("grow"):
 				_grow_gate(gate, side)
-				return true
+				return false
+	return true
+
+
+## Applies hit, crit, chain, slow and split. Returns true if the projectile flies on (pierce, bounce).
+func _bullet_hit_enemy(bullet: Bullet, enemy: Enemy) -> bool:
+	var pos := enemy.node.position
+	var damage := _roll_damage(bullet.damage)
+	var chained: Enemy = _nearest_enemy(pos, enemy, CHAIN_RANGE, false) if _stats.chain > 0.0 else null
+	if _stats.slow > 0.0:
+		enemy.slow_time = SLOW_TIME
+	_damage_enemy(enemy, damage)
+	if chained != null:
+		_explode(chained.node.position)
+		_damage_enemy(chained, damage * _stats.chain)
+	if bullet.split:
+		for side: float in [-1.0, 1.0]:
+			var shard := _spawn_bullet(bullet.pos, side * SPLIT_ANGLE, bullet.damage * SPLIT_DAMAGE, false)
+			if shard != null:
+				shard.last_hit = enemy
+				shard.pierce = 0
+				shard.bounce = 0
+	bullet.last_hit = enemy
+	if bullet.pierce > 0:
+		bullet.pierce -= 1
+		return true
+	if bullet.bounce > 0:
+		var target := _nearest_enemy(pos, enemy, BOUNCE_RANGE, false)
+		if target != null:
+			bullet.bounce -= 1
+			var direction := target.node.position - bullet.pos
+			direction.y = 0.0
+			bullet.vel = direction.normalized() * _stats.speed
+			return true
 	return false
+
+
+func _roll_damage(base: float) -> float:
+	return base * CRIT_MULTIPLIER if _stats.crit > 0.0 and randf() < _stats.crit else base
+
+
+func _steer_homing(bullet: Bullet, delta: float) -> void:
+	var target := _nearest_enemy(bullet.pos, bullet.last_hit, 20.0, true)
+	if target == null:
+		return
+	var direction := target.node.position - bullet.pos
+	direction.y = 0.0
+	bullet.vel = bullet.vel.move_toward(direction.normalized() * _stats.speed, _stats.homing * _stats.speed * delta)
+
+
+## Closest enemy within max_distance, ignoring exclude. ahead_only: only enemies further down the track.
+func _nearest_enemy(pos: Vector3, exclude: Enemy, max_distance: float, ahead_only: bool) -> Enemy:
+	var best: Enemy = null
+	var best_distance := max_distance
+	for enemy in _enemies:
+		if enemy == exclude or (ahead_only and enemy.node.position.z > pos.z):
+			continue
+		var distance := pos.distance_to(enemy.node.position)
+		if distance < best_distance:
+			best = enemy
+			best_distance = distance
+	return best
 
 
 # --- Enemies ----------------------------------------------------------------
@@ -289,7 +415,9 @@ func _update_enemies(delta: float) -> void:
 	for i in range(_enemies.size() - 1, -1, -1):
 		var enemy := _enemies[i]
 		var pos := enemy.node.position
-		pos.z += (_scroll + enemy.speed) * delta
+		enemy.slow_time = maxf(enemy.slow_time - delta, 0.0)
+		var slow := 1.0 - _stats.slow if enemy.slow_time > 0.0 else 1.0
+		pos.z += (_scroll + enemy.speed) * slow * delta
 		match enemy.kind:
 			"drone":
 				pos.y = enemy.radius + 0.3 + sin(_time * 2.5 + pos.x) * 0.15
@@ -322,11 +450,25 @@ func _other_lane(x: float) -> float:
 func _damage_enemy(enemy: Enemy, amount: float) -> void:
 	enemy.hp -= amount
 	enemy.pulse = 1.0
-	if enemy.hp <= 0.0:
+	if enemy.hp <= 0.0 and enemy in _enemies:
 		_kills += 1
 		_add_coins(enemy.coins)
 		_explode(enemy.node.position)
 		_remove_enemy(enemy)
+		_count_leech()
+
+
+## Chip "Schildraub": every n kills restore one shield point.
+func _count_leech() -> void:
+	if _stats.leech <= 0:
+		return
+	_leech_count += 1
+	if _leech_count >= _stats.leech:
+		_leech_count = 0
+		if _shield < MAX_SHIELD:
+			_shield += 1
+			_hud.set_shield(_shield, MAX_SHIELD)
+			_hud.toast("+1 SCHILD", RunArt.CYAN)
 
 
 func _remove_enemy(enemy: Enemy) -> void:

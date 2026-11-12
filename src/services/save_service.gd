@@ -31,6 +31,7 @@ static func default_data() -> Dictionary:
 		"coins": 0,
 		"stats": {"runs": 0, "wins": 0, "kills": 0},
 		"levels": {},
+		"loadout": Parts.DEFAULT_LOADOUT.duplicate(),
 	}
 
 
@@ -77,6 +78,7 @@ static func migrate(save_data: Dictionary) -> Dictionary:
 	var defaults := default_data()
 	save_data.merge(defaults)
 	(save_data["stats"] as Dictionary).merge(defaults["stats"])
+	save_data["loadout"] = Parts.sanitize(save_data["loadout"])
 	save_data["version"] = maxi(int(save_data["version"]), VERSION)
 	return save_data
 

@@ -288,13 +288,13 @@ static func orb() -> MeshInstance3D:
 
 
 ## All player bullets in one draw call.
-static func bullets(count: int) -> MultiMeshInstance3D:
+static func bullets(count: int, color: Color) -> MultiMeshInstance3D:
 	var capsule := CapsuleMesh.new()
 	capsule.radius = 0.06
 	capsule.height = 0.6
 	capsule.radial_segments = 6
 	capsule.rings = 2
-	capsule.material = mat(CYAN, 6.0)
+	capsule.material = mat(color, 6.0)
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
 	multi.mesh = capsule
