@@ -30,6 +30,14 @@ godot_console --headless --path . --export-debug "Android" build/frontline-forge
 adb install -r build/frontline-forge-debug.apk
 ```
 
+Tests ausführen (laufen auch automatisch bei jedem Pull Request):
+
+```powershell
+godot_console --headless --path . -s tests/run_tests.gd
+```
+
+Pipelines: `ci.yml` prüft jeden Pull Request (Tests, Probe-Bau, bei Ziel `main` die Versionsnummer). `release.yml` baut nach jedem Merge auf `main` die signierte APK und veröffentlicht sie als GitHub Release.
+
 ## Lizenz
 
 Alle Rechte vorbehalten. Der Code ist öffentlich einsehbar, aber nicht zur Weiterverwendung freigegeben.

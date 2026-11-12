@@ -1,0 +1,76 @@
+name: Setup Godot
+description: Installs the Godot version from .godot-version (cached) and imports the project.
+
+inputs:
+  android:
+    description: Also install export templates and configure Android export.
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Read Godot version
+      id: ver
+      shell: bash
+      run: |
+        v=$(tr -d '[:space:]' < .godot-version)
+        echo "full=$v" >> "$GITHUB_OUTPUT"
+        echo "minor=$(echo "$v" | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Godot binary
+      id: cache-bin
+      uses: actions/cache@v4
+      with:
+        path: ~/godot-bin
+        key: godot-bin-${{ steps.ver.outputs.full }}
+
+    - name: Download Godot
+      if: steps.cache-bin.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        v=${{ steps.ver.outputs.full }}
+        mkdir -p ~/godot-bin
+        curl -sSfL -o /tmp/godot.zip "https://github.com/godotengine/godot/releases/download/${v}-stable/Godot_v${v}-stable_linux.x86_64.zip"
+        unzip -q /tmp/godot.zip -d ~/godot-bin
+        mv ~/godot-bin/Godot_v${v}-stable_linux.x86_64 ~/godot-bin/godot
+        chmod +x ~/godot-bin/godot
+
+    - name: Add Godot to PATH
+      shell: bash
+      run: echo "$HOME/godot-bin" >> "$GITHUB_PATH"
+
+    - name: Cache export templates
+      if: inputs.android == 'true'
+      id: cache-tpl
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/share/godot/export_templates/${{ steps.ver.outputs.full }}.stable
+        key: godot-templates-${{ steps.ver.outputs.full }}
+
+    - name: Download export templates
+      if: inputs.android == 'true' && steps.cache-tpl.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        v=${{ steps.ver.outputs.full }}
+        curl -sSfL -o /tmp/templates.tpz "https://github.com/godotengine/godot/releases/download/${v}-stable/Godot_v${v}-stable_export_templates.tpz"
+        unzip -q /tmp/templates.tpz -d /tmp/tpl
+        mkdir -p ~/.local/share/godot/export_templates
+        mv /tmp/tpl/templates ~/.local/share/godot/export_templates/${v}.stable
+        rm /tmp/templates.tpz
+
+    - name: Configure Android export
+      if: inputs.android == 'true'
+      shell: bash
+      run: |
+        mkdir -p ~/.config/godot
+        cat > ~/.config/godot/editor_settings-${{ steps.ver.outputs.minor }}.tres <<EOF
+        [gd_resource type="EditorSettings" format=3]
+
+        [resource]
+        export/android/java_sdk_path = "$JAVA_HOME_17_X64"
+        export/android/android_sdk_path = "$ANDROID_SDK_ROOT"
+        EOF
+
+    - name: Import project
+      shell: bash
+      run: godot --headless --path . --import
