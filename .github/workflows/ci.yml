@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-godot
+      - name: Run unit tests
+        run: godot --headless --path . -s tests/run_tests.gd
+
+  apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-godot
+        with:
+          android: "true"
+      - name: Export debug APK
+        run: |
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$RUNNER_TEMP/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
+          "$JAVA_HOME_17_X64/bin/keytool" -genkeypair -keystore "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" \
+            -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 \
+            -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p build
+          godot --headless --path . --export-debug "Android" build/frontline-forge-debug.apk
+          test -s build/frontline-forge-debug.apk
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: frontline-forge-debug-apk
+          path: build/frontline-forge-debug.apk
+          retention-days: 7
+
+  version:
+    name: Version check
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Version must be raised and unused
+        run: |
+          new=$(tr -d '[:space:]' < version.txt)
+          old=$(git show origin/main:version.txt 2>/dev/null | tr -d '[:space:]' || echo 0.0.0)
+          if ! [[ "$new" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version.txt muss MAJOR.MINOR.PATCH sein, ist aber '$new'"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$new" >/dev/null; then
+            echo "::error::Tag v$new existiert bereits. version.txt erhoehen."; exit 1
+          fi
+          if [ "$new" != "$old" ] && [ "$(printf '%s\n%s\n' "$old" "$new" | sort -V | tail -1)" = "$new" ]; then
+            echo "Version $old -> $new"
+          else
+            echo "::error::version.txt ($new) muss groesser sein als auf main ($old)."; exit 1
+          fi
