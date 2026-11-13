@@ -65,6 +65,7 @@ func _ready() -> void:
 	Updates.install_started.connect(_on_install_started)
 	Updates.failed.connect(_on_update_failed)
 	Updates.check()
+	Audio.music("menu")
 
 
 func _exit_tree() -> void:

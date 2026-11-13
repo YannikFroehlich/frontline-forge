@@ -1,12 +1,21 @@
 extends Node
-## Autoload "Audio": all sound effects of the game (plan 11.3, 11.4).
+## Autoload "Audio": sound effects and music of the game (plan 11.3, 11.4).
 ## Sounds are synthesized once at start (see Synth). Each category has its own bus and a small pool
 ## of players, so rapid fire can never stack hundreds of voices. A limiter on the master bus prevents clipping.
 ## Every sound gets a small random pitch change so repeats do not tire the ear.
-# ponytail: pitch variation instead of three recorded variants per sound, no music and no volume settings yet.
-# Music comes next in M2, the sliders with the settings screen.
+## Music: one looping track per situation with a soft crossfade (plan 11.4, simplified adaptive layers).
+## Sources and licenses of the tracks are listed in docs/lizenzen.md.
+# ponytail: pitch variation instead of three recorded variants per sound, no volume settings yet.
+# The sliders come with the settings screen.
 
-const BUSES := {"Weapons": -8.0, "Sfx": -5.0, "Ui": -10.0}
+const BUSES := {"Music": -9.0, "Weapons": -8.0, "Sfx": -5.0, "Ui": -10.0}
+const MUSIC := {
+	"menu": "res://assets/audio/music/menu_theme.ogg",
+	"level": "res://assets/audio/music/level_army_approaching.ogg",
+	"boss": "res://assets/audio/music/boss_epic_battle.ogg",
+}
+const MUSIC_FADE := 1.2
+const SILENT_DB := -50.0
 const VOICES := {"Weapons": 6, "Sfx": 10, "Ui": 3}
 ## Shortest gap between two plays of the same sound, in seconds. Keeps dense fire and hits readable.
 const MIN_GAP := 0.045
@@ -47,6 +56,10 @@ var _streams: Dictionary = {}
 var _players: Dictionary = {}
 var _next: Dictionary = {}
 var _last_played: Dictionary = {}
+var _music_players: Array[AudioStreamPlayer] = []
+var _music_active := 0
+var _music_id := ""
+var _music_tween: Tween
 
 
 func _ready() -> void:
@@ -58,7 +71,7 @@ func _ready() -> void:
 		AudioServer.set_bus_name(index, bus)
 		AudioServer.set_bus_volume_db(index, BUSES[bus])
 		var pool: Array[AudioStreamPlayer] = []
-		for i in int(VOICES[bus]):
+		for i in int(VOICES.get(bus, 0)):
 			var player := AudioStreamPlayer.new()
 			player.bus = bus
 			add_child(player)
@@ -67,6 +80,11 @@ func _ready() -> void:
 		_next[bus] = 0
 	for id: String in SOUNDS:
 		_streams[id] = Synth.make(SOUNDS[id])
+	for i in 2:
+		var player := AudioStreamPlayer.new()
+		player.bus = "Music"
+		add_child(player)
+		_music_players.append(player)
 	# Every button in the game gets the tap sound without each screen wiring it up.
 	get_tree().node_added.connect(_on_node_added)
 
@@ -84,6 +102,30 @@ func play(id: String, pitch: float = 1.0) -> void:
 	player.stream = _streams[id]
 	player.pitch_scale = pitch * randf_range(1.0 - PITCH_SPREAD, 1.0 + PITCH_SPREAD)
 	player.play()
+
+
+## Crossfades to the looping track "menu", "level" or "boss". "" fades the music out.
+func music(id: String) -> void:
+	if id == _music_id:
+		return
+	_music_id = id
+	var old := _music_players[_music_active]
+	_music_active = 1 - _music_active
+	var new := _music_players[_music_active]
+	if _music_tween != null:
+		_music_tween.kill()
+	_music_tween = create_tween().set_parallel().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_music_tween.tween_property(old, "volume_db", SILENT_DB, MUSIC_FADE)
+	if id == "":
+		new.stop()
+	else:
+		var stream: AudioStreamOggVorbis = load(MUSIC[id])
+		stream.loop = true
+		new.stream = stream
+		new.volume_db = SILENT_DB
+		new.play()
+		_music_tween.tween_property(new, "volume_db", 0.0, MUSIC_FADE)
+	_music_tween.chain().tween_callback(old.stop)
 
 
 ## Shot of the given chassis, coloured by the core: cryo glassy and high, plasma deep, shock sharp.
