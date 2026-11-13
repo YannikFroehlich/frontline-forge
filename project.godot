@@ -16,6 +16,7 @@ boot_splash/show_image=false
 
 Updates="*res://src/services/update_service.gd"
 Save="*res://src/services/save_service.gd"
+Audio="*res://src/services/audio_director.gd"
 
 [debug]
 
