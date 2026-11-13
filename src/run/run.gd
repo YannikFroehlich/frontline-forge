@@ -140,8 +140,10 @@ func _ready() -> void:
 	_hud = RunHud.new()
 	add_child(_hud)
 	_hud.back_pressed.connect(_go_back)
-	_hud.restart_pressed.connect(get_tree().reload_current_scene)
-	_hud.arsenal_pressed.connect(get_tree().change_scene_to_file.bind("res://scenes/arsenal.tscn"))
+	_hud.pause_pressed.connect(_set_paused.bind(true))
+	_hud.resume_pressed.connect(_set_paused.bind(false))
+	_hud.restart_pressed.connect(_restart)
+	_hud.arsenal_pressed.connect(_open_arsenal)
 	_hud.set_shield(_shield, MAX_SHIELD)
 	_hud.set_stats(_stats)
 	_hud.set_coins(_coins)
@@ -151,9 +153,27 @@ func _exit_tree() -> void:
 	get_tree().quit_on_go_back = true
 
 
+## Android back toggles the pause menu. Leaving the app pauses the run (plan 4.1).
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		_go_back()
+	match what:
+		NOTIFICATION_WM_GO_BACK_REQUEST:
+			if _playing():
+				_set_paused(not get_tree().paused)
+			else:
+				_go_back()
+		NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED:
+			if _playing():
+				_set_paused(true)
+
+
+func _set_paused(paused: bool) -> void:
+	get_tree().paused = paused and _playing()
+	_hud.show_pause(get_tree().paused)
+
+
+func _restart() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
 
 
 ## Relative drag: finger anywhere on screen, platform follows the movement (plan 4.2).
@@ -705,4 +725,10 @@ func _explode(pos: Vector3) -> void:
 
 
 func _go_back() -> void:
-	get_tree().change_scene_to_file("res://scenes/boot.tscn")
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+
+func _open_arsenal() -> void:
+	MainMenu.start_tab = "arsenal"
+	_go_back()
