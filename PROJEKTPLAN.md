@@ -1129,3 +1129,34 @@ Qualitätsregeln: statisch typisiertes GDScript mit Warnungen als Fehler, keine 
 2. Referenz 30 Minuten selbst spielen, Abschnitt 2 gegenprüfen.
 3. M0 starten: Godot einrichten, Android-Export auf dem eigenen Gerät testen, Git-Repository und Pipelines aufsetzen, Aktualisierung aus der App nachweisen, Stilprobe bauen.
 4. M1: Prototyp der Kernschleife, danach Entscheidung „weiter oder Mechanik ändern“.
+
+---
+
+## 24. Stand und Abweichungen vom Plan (13.11.2026)
+
+Stand: M0, M1 und M2 sind umgesetzt. Veröffentlicht sind v0.0.1, v0.0.2 und v0.1.0, vorbereitet ist v0.2.0.
+
+Bewusste Abweichungen. Der Plan oben bleibt als Zielbild stehen, hier steht, was tatsächlich gebaut wurde und warum.
+
+| Thema | Plan | Umgesetzt | Grund |
+|-------|------|-----------|-------|
+| Installation der APK (13.6, 17) | Kotlin-Plugin `android/plugins/updater` | Kein Plugin. `OS.shell_open` auf die heruntergeladene Datei, Godot 4.7 stellt den FileProvider selbst | Weniger Code, kein nativer Bauschritt |
+| Test-Framework (17, 21) | GUT in `addons/` | Eigener kleiner Test-Runner `tests/run_tests.gd` | Keine Abhängigkeit. Wechsel zu GUT, sobald Mocks oder Fixtures nötig werden |
+| Versionsprüfung (13.5) | Vergleich mit `version.txt` auf `main` | Vergleich mit dem neuesten Tag `v*` | Der Vergleich mit `main` hätte das erste Release blockiert |
+| Testversion | Nicht vorgesehen | Zweites Export-Preset „Android Dev“ mit eigenem Paketnamen, ohne Aktualisierungsprüfung | Debug- und Release-Signatur vertragen sich nicht, so laufen beide Apps nebeneinander |
+| Definitionen (13.3, 15.1) | Ressourcen `.tres` in `data/` | Konstanten in GDScript (`Parts`, `LevelData`) | Reicht für ein Level und 21 Bauteile. Umzug nach `data/`, wenn M3 die 15 Level bringt |
+| Waffen im Spielstand (15.2) | Liste einzelner Waffen mit Startwert und Stufen | Eine Ausrüstung aus vier Bauteilen, Besitz je Bauteil, Upgrade-Stufen je Gehäuse | Ohne Generator und Raritäten (M3) gibt es noch keine einzelnen Waffenexemplare |
+| Upgrades (7.5) | Sieben Wertstufen, Fähigkeitsstufen | Schaden und Feuerrate, je 20 Stufen | Die übrigen Werte gibt es im Kampf noch nicht |
+| Aufhol-Regel und Rückerstattung (6.4) | Vorgesehen | Noch nicht vorhanden | Kommt mit der Schmiede |
+| Startbildschirm (9.1, 17) | `boot.tscn` und `main_menu.tscn` | Nur `main_menu.tscn` | Das Laden ist so kurz, dass ein eigener Startbildschirm nichts zeigt |
+| Menü (9.1) | Spielen, Arsenal, Schmiede, Shop, Profil, Einstellungen | Spielen, Arsenal, Profil | Schmiede, Shop und Einstellungen folgen mit M3/M4 |
+| Grafik (11.1, 20) | Modelle aus freien CC0-Paketen möglich | Alles aus Grundformen und Shadern, Waffenmodell aus den Bauteilen zusammengesetzt | Passt zum Stil „Licht und Effekte statt Texturen“, kein Download, keine Lizenzpflege |
+| Soundeffekte (11.4) | Grundlage aus CC0-Paketen | Vollständig per Synthese im Spiel erzeugt (`Synth`) | Der Plan nennt eigene Synthese als Weg. Keine Dateien, APK wächst nicht |
+| Musik (11.3, 11.4) | Hybrid aus Orchester und Elektronik | Drei rein orchestrale CC0-Stücke von einem Komponisten (Menü, Level, Boss) | Freie Hybrid-Stücke nicht gefunden. Das Risiko stand bereits in 11.4 |
+| Schriften (9.3) | Rajdhani und Inter | Wie geplant, aus dem Google-Fonts-Repository | – |
+
+Noch offen aus M1 und M2:
+
+- **Spielgefühl:** Der Abbruchpunkt nach M1 („Macht es Spaß?“) wurde nicht ausdrücklich beantwortet. Die Werte für Gegner, Tore, Boss, Preise und Upgrades sind Schätzungen ohne Spieltest.
+- **Ton:** Klang, Lautstärkeverhältnis und Schleifenübergänge sind nur technisch geprüft, nicht nach Gehör abgestimmt.
+- **Einstellungen:** Lautstärkeregler, Grafikoptionen und Barrierefreiheit fehlen noch (M3).

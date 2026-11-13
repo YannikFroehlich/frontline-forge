@@ -2,7 +2,14 @@
 
 Android-Actionspiel: Waffenplattform fährt automatisch eine Bahn entlang, der Spieler lenkt, wählt Tore und baut zwischen den Läufen ein modulares Arsenal auf.
 
-Status: Prototyp (Meilenstein M1). Ein Level mit Boss ist spielbar, Grafik und Werte sind vorläufig.
+Status: Vertikaler Schnitt (Meilenstein M2). Spielbar ist ein Level mit Boss, dazu:
+
+- modulare Waffen aus Gehäuse, Lauf, Kern und Chip (21 Bauteile)
+- Münzen, Freischalten von Bauteilen und Upgrades im Arsenal
+- sicherer Spielstand mit Sicherungskopien
+- Hauptmenü, Pause, Musik und Soundeffekte
+
+Die Balance-Werte sind noch nicht durch Spieltests abgestimmt. Was vom Projektplan abweicht, steht in dessen Abschnitt 24.
 
 Vollständiges Konzept: [PROJEKTPLAN.md](PROJEKTPLAN.md)
 
@@ -35,6 +42,8 @@ Tests ausführen (laufen auch automatisch bei jedem Pull Request):
 ```powershell
 godot_console --headless --path . -s tests/run_tests.gd
 ```
+
+Fremde Inhalte (Musik, Schriften) mit Quelle und Lizenz: [docs/lizenzen.md](docs/lizenzen.md).
 
 Pipelines: `ci.yml` prüft jeden Pull Request (Tests, Probe-Bau, bei Ziel `main` die Versionsnummer). `release.yml` baut nach jedem Merge auf `main` die signierte APK und veröffentlicht sie als GitHub Release.
 
