@@ -1,7 +1,8 @@
 class_name RunArt
-## Gray-box meshes and materials for the M1 prototype, built from primitives in code.
-## Look follows the approved style sample (M0 step 7).
-# ponytail: primitives only, new materials per spawn. Real models and shared materials come with the art pass.
+## Meshes, materials and effects of the run, built from primitives in code (plan 11.1):
+## clear shapes carried by light, glowing edges and particles instead of texture detail.
+## The weapon model is assembled from the equipped parts.
+# ponytail: new materials per spawn. Share them if the enemy count per level grows a lot.
 
 const CYAN := Color(0.133, 0.882, 1.0)
 const MAGENTA := Color(1.0, 0.24, 0.506)
@@ -34,7 +35,37 @@ void fragment() {
 """
 
 
-static func environment(parent: Node) -> void:
+const SKY_SHADER := """
+shader_type spatial;
+render_mode unshaded, fog_disabled, cull_disabled;
+uniform vec3 top_color : source_color = vec3(0.01, 0.015, 0.05);
+uniform vec3 horizon_color : source_color = vec3(0.35, 0.08, 0.3);
+uniform vec3 sun_color : source_color = vec3(1.0, 0.45, 0.25);
+
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+void fragment() {
+	vec2 uv = UV;
+	float height = 1.0 - uv.y;
+	vec3 color = mix(horizon_color, top_color, smoothstep(0.0, 0.55, height));
+	// Low sun with horizontal cuts.
+	vec2 sun_uv = (uv - vec2(0.5, 0.92)) * vec2(2.6, 1.0);
+	float sun = smoothstep(0.17, 0.165, length(sun_uv));
+	float cuts = step(0.35, fract(height * 60.0 - TIME * 0.05)) + smoothstep(0.1, 0.16, height);
+	color = mix(color, sun_color * 1.6, sun * clamp(cuts, 0.0, 1.0));
+	// Sparse twinkling stars in the upper part.
+	vec2 cell = floor(uv * vec2(1100.0, 420.0));
+	float star = step(0.9975, hash(cell)) * smoothstep(0.2, 0.5, height);
+	color += vec3(star) * (0.6 + 0.4 * sin(TIME * 2.0 + hash(cell + 1.0) * 6.28));
+	ALBEDO = color;
+}
+"""
+
+
+## Builds light, fog, glow, sky and camera. Returns the camera for screen shake.
+static func environment(parent: Node) -> Camera3D:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.03, 0.07)
@@ -69,6 +100,17 @@ static func environment(parent: Node) -> void:
 	parent.add_child(camera)
 	camera.look_at(Vector3(0.0, 0.4, -12.0))
 
+	var sky_shader := Shader.new()
+	sky_shader.code = SKY_SHADER
+	var sky_mat := ShaderMaterial.new()
+	sky_mat.shader = sky_shader
+	var sky := QuadMesh.new()
+	sky.size = Vector2(520.0, 200.0)
+	var sky_node := mesh(sky, sky_mat, Vector3(0.0, 86.0, -230.0))
+	sky_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(sky_node)
+	return camera
+
 
 ## Returns the floor material, its "scroll" parameter moves the grid.
 static func track(parent: Node) -> ShaderMaterial:
@@ -87,16 +129,18 @@ static func track(parent: Node) -> ShaderMaterial:
 	return floor_mat
 
 
-static func pillars(parent: Node) -> Array[Node3D]:
+## Row of towers on both sides. near/far = distance from the track centre. The run moves the far,
+## taller layer slower for depth.
+static func pillars(parent: Node, count: int, near: float, far: float, max_height: float) -> Array[Node3D]:
 	var result: Array[Node3D] = []
 	var body_mat := mat(Color(0.06, 0.07, 0.11), 0.0, 0.5, 0.6)
 	var cap_mats: Array[StandardMaterial3D] = [mat(CYAN, 3.0), mat(MAGENTA, 3.0), mat(AMBER, 2.5)]
-	for i in 26:
+	for i in count:
 		var pillar := Node3D.new()
 		var side := -1.0 if i % 2 == 0 else 1.0
-		var height := randf_range(2.0, 12.0)
-		var width := randf_range(1.0, 2.5)
-		pillar.position = Vector3(side * randf_range(5.5, 13.0), 0.0, -100.0 + i * 4.2)
+		var height := randf_range(max_height * 0.2, max_height)
+		var width := randf_range(1.0, 2.5) * (far / 13.0)
+		pillar.position = Vector3(side * randf_range(near, far), 0.0, -100.0 + i * (110.0 / count))
 		var body := BoxMesh.new()
 		body.size = Vector3(width, height, width)
 		pillar.add_child(mesh(body, body_mat, Vector3(0.0, height * 0.5, 0.0)))
@@ -108,11 +152,13 @@ static func pillars(parent: Node) -> Array[Node3D]:
 	return result
 
 
+## Weapon platform assembled from the loadout: chassis shape, barrel layout, core colour, chip light.
 ## Children used by the run: "Muzzle" (with "Flash"), "Core".
-static func platform() -> Node3D:
+static func platform(loadout: Dictionary, core_color: Color) -> Node3D:
 	var root := Node3D.new()
 	var metal := mat(Color(0.16, 0.18, 0.24), 0.0, 0.8, 0.35)
 	var dark := mat(Color(0.08, 0.09, 0.12), 0.0, 0.6, 0.5)
+	var glow := mat(core_color, 4.0)
 
 	var base := CylinderMesh.new()
 	base.top_radius = 0.9
@@ -127,32 +173,69 @@ static func platform() -> Node3D:
 	ring.ring_segments = 6
 	root.add_child(mesh(ring, mat(CYAN, 4.0), Vector3(0.0, -0.42, 0.0)))
 
-	var body := BoxMesh.new()
-	body.size = Vector3(0.55, 0.42, 1.5)
-	root.add_child(mesh(body, metal, Vector3.ZERO))
-	var stripe := BoxMesh.new()
-	stripe.size = Vector3(0.57, 0.06, 1.0)
-	root.add_child(mesh(stripe, mat(AMBER, 2.5), Vector3(0.0, 0.05, 0.1)))
-	var fin := BoxMesh.new()
-	fin.size = Vector3(0.9, 0.05, 0.5)
+	# Chassis: body size, barrel thickness and extra blocks.
+	var body_size := Vector3(0.55, 0.42, 1.5)
+	var barrel_scale := 1.0
+	match loadout["chassis"]:
+		"smg":
+			body_size = Vector3(0.5, 0.36, 1.0)
+			barrel_scale = 0.75
+			for side: float in [-1.0, 1.0]:
+				root.add_child(_box(Vector3(0.16, 0.2, 0.7), metal, Vector3(0.36 * side, -0.02, 0.0)))
+		"cannon":
+			body_size = Vector3(0.8, 0.62, 1.3)
+			barrel_scale = 1.6
+			root.add_child(_box(Vector3(1.0, 0.3, 0.5), dark, Vector3(0.0, -0.1, 0.55)))
+		"shotgun":
+			body_size = Vector3(0.9, 0.4, 1.1)
+			barrel_scale = 1.15
+			root.add_child(_box(Vector3(1.1, 0.46, 0.3), dark, Vector3(0.0, 0.0, -0.6)))
+	root.add_child(_box(body_size, metal, Vector3.ZERO))
+	root.add_child(_box(Vector3(body_size.x + 0.02, 0.06, body_size.z * 0.65), mat(AMBER, 2.5), Vector3(0.0, 0.05, 0.1)))
 	for side: float in [-1.0, 1.0]:
-		root.add_child(mesh(fin, metal, Vector3(0.55 * side, -0.12, 0.35)))
+		root.add_child(_box(Vector3(0.9, 0.05, 0.5), metal, Vector3((body_size.x * 0.5 + 0.3) * side, -0.12, 0.35)))
 
-	var barrel := CylinderMesh.new()
-	barrel.top_radius = 0.11
-	barrel.bottom_radius = 0.14
-	barrel.height = 1.3
-	barrel.radial_segments = 10
-	var barrel_node := mesh(barrel, dark, Vector3(0.0, 0.05, -1.25))
-	barrel_node.rotation_degrees.x = -90.0
-	root.add_child(barrel_node)
+	# Barrel: one tube, a fan of three, a tight bundle of three, or a tube with glowing coils.
+	var front := -body_size.z * 0.5
+	match loadout["barrel"]:
+		"fan":
+			for angle: float in [-0.22, 0.0, 0.22]:
+				root.add_child(_barrel(0.09 * barrel_scale, 0.9, dark, Vector3(0.0, 0.05, front), angle))
+		"burst":
+			for offset: Vector2 in [Vector2(0.0, 0.12), Vector2(-0.11, -0.06), Vector2(0.11, -0.06)]:
+				root.add_child(_barrel(0.07 * barrel_scale, 1.2, dark,
+						Vector3(offset.x * barrel_scale, 0.05 + offset.y * barrel_scale, front), 0.0))
+		"wave":
+			root.add_child(_barrel(0.1 * barrel_scale, 1.2, dark, Vector3(0.0, 0.05, front), 0.0))
+			var coil := TorusMesh.new()
+			coil.inner_radius = 0.13 * barrel_scale
+			coil.outer_radius = 0.19 * barrel_scale
+			for i in 3:
+				var coil_node := mesh(coil, glow, Vector3(0.0, 0.05, front - 0.3 - i * 0.35))
+				coil_node.rotation_degrees.x = 90.0
+				root.add_child(coil_node)
+		_:
+			root.add_child(_barrel(0.12 * barrel_scale, 1.3, dark, Vector3(0.0, 0.05, front), 0.0))
+	var muzzle_ring := TorusMesh.new()
+	muzzle_ring.inner_radius = 0.13 * barrel_scale
+	muzzle_ring.outer_radius = 0.2 * barrel_scale
+	var muzzle_node := mesh(muzzle_ring, glow, Vector3(0.0, 0.05, front - 1.2))
+	muzzle_node.rotation_degrees.x = 90.0
+	root.add_child(muzzle_node)
 
 	var core := SphereMesh.new()
-	core.radius = 0.12
-	core.height = 0.24
-	var core_node := mesh(core, mat(Color(0.7, 0.95, 1.0), 3.0), Vector3(0.0, 0.3, 0.25))
+	core.radius = 0.13
+	core.height = 0.26
+	var core_node := mesh(core, mat(core_color.lerp(Color.WHITE, 0.5), 3.0, 0.2, 0.5, core_color),
+			Vector3(0.0, body_size.y * 0.5 + 0.08, 0.25))
 	core_node.name = "Core"
 	root.add_child(core_node)
+
+	# Chip: small amber antenna, only when a chip is installed.
+	if loadout["chip"] != "none":
+		var chip_x := body_size.x * 0.5 - 0.06
+		root.add_child(_box(Vector3(0.05, 0.3, 0.05), dark, Vector3(chip_x, body_size.y * 0.5 + 0.15, 0.5)))
+		root.add_child(_box(Vector3(0.1, 0.1, 0.1), mat(AMBER, 5.0), Vector3(chip_x, body_size.y * 0.5 + 0.34, 0.5)))
 
 	var muzzle := Node3D.new()
 	muzzle.name = "Muzzle"
@@ -160,13 +243,36 @@ static func platform() -> Node3D:
 	root.add_child(muzzle)
 	var flash := OmniLight3D.new()
 	flash.name = "Flash"
-	flash.light_color = CYAN
+	flash.light_color = core_color
 	flash.omni_range = 5.0
 	flash.light_energy = 0.0
 	muzzle.add_child(flash)
 	return root
 
 
+static func _box(size: Vector3, material: Material, pos: Vector3) -> MeshInstance3D:
+	var box := BoxMesh.new()
+	box.size = size
+	return mesh(box, material, pos)
+
+
+## Tube pointing forward (-z) from start, turned by angle (radians) around the vertical axis.
+static func _barrel(radius: float, length: float, material: Material, start: Vector3, angle: float) -> Node3D:
+	var pivot := Node3D.new()
+	pivot.position = start
+	pivot.rotation.y = -angle
+	var tube := CylinderMesh.new()
+	tube.top_radius = radius
+	tube.bottom_radius = radius * 1.25
+	tube.height = length
+	tube.radial_segments = 10
+	var node := mesh(tube, material, Vector3(0.0, 0.0, -length * 0.5))
+	node.rotation_degrees.x = -90.0
+	pivot.add_child(node)
+	return pivot
+
+
+## Enemy model. The child named "Shell" has its own emissive material, the run flashes it on hits.
 static func enemy(kind: String) -> Node3D:
 	var root := Node3D.new()
 	match kind:
@@ -176,7 +282,7 @@ static func enemy(kind: String) -> Node3D:
 			shell.height = 0.8
 			shell.radial_segments = 6
 			shell.rings = 3
-			root.add_child(mesh(shell, mat(Color(0.12, 0.05, 0.1), 0.6, 0.6, 0.4, MAGENTA), Vector3.ZERO))
+			root.add_child(_shell(shell, mat(Color(0.12, 0.05, 0.1), 0.6, 0.6, 0.4, MAGENTA)))
 			var eye := SphereMesh.new()
 			eye.radius = 0.16
 			eye.height = 0.32
@@ -191,7 +297,7 @@ static func enemy(kind: String) -> Node3D:
 		"tank":
 			var hull := BoxMesh.new()
 			hull.size = Vector3(2.0, 1.1, 1.8)
-			root.add_child(mesh(hull, mat(Color(0.14, 0.12, 0.08), 0.0, 0.7, 0.4), Vector3.ZERO))
+			root.add_child(_shell(hull, mat(Color(0.14, 0.12, 0.08), 0.05, 0.7, 0.4, AMBER)))
 			var armor := BoxMesh.new()
 			armor.size = Vector3(2.2, 0.9, 0.2)
 			root.add_child(mesh(armor, mat(Color(0.25, 0.2, 0.1), 0.4, 0.7, 0.4, AMBER), Vector3(0.0, 0.0, 1.0)))
@@ -204,7 +310,7 @@ static func enemy(kind: String) -> Node3D:
 			body.height = 1.2
 			body.radial_segments = 4
 			body.rings = 2
-			root.add_child(mesh(body, mat(Color(0.08, 0.12, 0.04), 0.6, 0.6, 0.4, LIME), Vector3.ZERO))
+			root.add_child(_shell(body, mat(Color(0.08, 0.12, 0.04), 0.6, 0.6, 0.4, LIME)))
 			var eye := SphereMesh.new()
 			eye.radius = 0.15
 			eye.height = 0.3
@@ -212,11 +318,18 @@ static func enemy(kind: String) -> Node3D:
 	return root
 
 
+static func _shell(shape: Mesh, material: Material) -> MeshInstance3D:
+	var node := mesh(shape, material, Vector3.ZERO)
+	node.name = "Shell"
+	return node
+
+
+## Boss model, also with a "Shell" child for hit flashes.
 static func boss() -> Node3D:
 	var root := Node3D.new()
 	var hull := BoxMesh.new()
 	hull.size = Vector3(4.4, 2.4, 2.0)
-	root.add_child(mesh(hull, mat(Color(0.1, 0.05, 0.1), 0.0, 0.8, 0.35), Vector3.ZERO))
+	root.add_child(_shell(hull, mat(Color(0.1, 0.05, 0.1), 0.05, 0.8, 0.35, MAGENTA)))
 	var band := BoxMesh.new()
 	band.size = Vector3(4.5, 0.15, 2.05)
 	root.add_child(mesh(band, mat(MAGENTA, 3.0), Vector3(0.0, 0.6, 0.0)))
@@ -291,7 +404,7 @@ static func orb() -> MeshInstance3D:
 static func bullets(count: int, color: Color) -> MultiMeshInstance3D:
 	var capsule := CapsuleMesh.new()
 	capsule.radius = 0.06
-	capsule.height = 0.6
+	capsule.height = 0.9
 	capsule.radial_segments = 6
 	capsule.rings = 2
 	capsule.material = mat(color, 6.0)
@@ -326,6 +439,18 @@ static func explosion(color: Color) -> CPUParticles3D:
 	shard.size = Vector3.ONE * 0.14
 	shard.material = mat(color, 6.0)
 	particles.mesh = shard
+	return particles
+
+
+## Short burst of a few sparks where a projectile hits.
+static func spark(color: Color) -> CPUParticles3D:
+	var particles := explosion(color)
+	particles.amount = 6
+	particles.lifetime = 0.25
+	particles.initial_velocity_min = 2.0
+	particles.initial_velocity_max = 5.0
+	particles.direction = Vector3(0.0, 0.3, 1.0)
+	particles.spread = 50.0
 	return particles
 
 

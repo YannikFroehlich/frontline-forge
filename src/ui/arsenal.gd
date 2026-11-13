@@ -15,6 +15,7 @@ var _upgrade_buttons: Dictionary = {}
 var _stats_label: Label
 var _traits_label: Label
 var _upgrade_title: Label
+var _preview: WeaponPreview
 
 
 func _ready() -> void:
@@ -36,6 +37,8 @@ func _ready() -> void:
 	content.add_child(stats_panel)
 	var stats_box := VBoxContainer.new()
 	stats_panel.add_child(stats_box)
+	_preview = WeaponPreview.new()
+	stats_box.add_child(_preview)
 	_stats_label = _label("")
 	stats_box.add_child(_stats_label)
 	_traits_label = _label("")
@@ -152,6 +155,7 @@ func refresh() -> void:
 		WeaponStats.format_number(stats.damage), WeaponStats.format_number(stats.fire_rate),
 		stats.projectiles, " ×%d Salve" % stats.burst if stats.burst > 1 else "", roundi(stats.range_m),
 		WeaponStats.format_number(roundf(stats.dps()))]
+	_preview.show_loadout(_shown, stats.color)
 	_traits_label.text = " · ".join(stats.traits())
 	_traits_label.visible = _traits_label.text != ""
 
