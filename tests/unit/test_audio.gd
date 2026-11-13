@@ -46,6 +46,15 @@ func test_every_chassis_has_a_shot_sound() -> void:
 		check(AudioDirector.SOUNDS.has("shot_" + chassis), "Schussklang für %s" % chassis)
 
 
+func test_music_files_exist_and_are_documented() -> void:
+	var licenses := FileAccess.get_file_as_string("res://docs/lizenzen.md")
+	for id: String in AudioDirector.MUSIC:
+		var path: String = AudioDirector.MUSIC[id]
+		check(FileAccess.file_exists(path), "Musik %s: Datei %s" % [id, path])
+		check(licenses.contains(path.get_file()), "%s steht in docs/lizenzen.md" % path.get_file())
+	check(AudioDirector.BUSES.has("Music"), "Musik-Bus")
+
+
 func test_stream_format() -> void:
 	var stream := Synth.make({"notes": [[440.0, 440.0, 0.05]]})
 	check_eq(stream.mix_rate, Synth.RATE, "Abtastrate")

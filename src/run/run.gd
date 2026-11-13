@@ -163,6 +163,7 @@ func _ready() -> void:
 	_hud.set_shield(_shield, MAX_SHIELD)
 	_hud.set_stats(_stats)
 	_hud.set_coins(_coins)
+	Audio.music("level")
 
 
 func _exit_tree() -> void:
@@ -637,6 +638,7 @@ func _update_boss(delta: float) -> void:
 			_state = State.BOSS
 			_hud.set_boss(1.0)
 			_hud.toast("WÄCHTER", RunArt.MAGENTA)
+			Audio.music("boss")
 		return
 	if _state != State.BOSS:
 		return
@@ -703,6 +705,7 @@ func _win() -> void:
 	_state = State.WON
 	_shake = 1.0
 	Audio.play("explosion")
+	Audio.music("")
 	_slow_motion(0.25, 0.9)
 	_add_coins(LevelData.BOSS_COINS + LevelData.WIN_COINS)
 	for offset: Vector3 in [Vector3.ZERO, Vector3(-1.5, 0.5, 0.0), Vector3(1.5, -0.3, 0.0), Vector3(0.0, 1.0, 0.5)]:
@@ -722,6 +725,7 @@ func _win() -> void:
 func _lose() -> void:
 	_state = State.LOST
 	Audio.play("explosion")
+	Audio.music("")
 	_explode(_platform.position)
 	_platform.hide()
 	_scroll = 0.0
