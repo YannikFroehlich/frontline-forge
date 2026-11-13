@@ -48,6 +48,9 @@ class Enemy:
 	var timer := 0.0
 	var target_x := 0.0
 	var slow_time := 0.0
+	## Emissive material of the model's shell and its resting glow, for hit flashes.
+	var shell: StandardMaterial3D
+	var glow := 0.0
 
 
 class Bullet:
@@ -105,11 +108,18 @@ var _telegraphs: Array[Telegraph] = []
 var _boss: Node3D
 var _boss_hp := 0.0
 var _boss_pulse := 0.0
+var _boss_shell: StandardMaterial3D
+var _enraged := false
 var _boss_attack := 1.5
 var _boss_spawn := 4.0
 
 var _floor_mat: ShaderMaterial
 var _pillars: Array[Node3D] = []
+var _far_pillars: Array[Node3D] = []
+var _camera: Camera3D
+var _shake := 0.0
+var _sparks: Array[CPUParticles3D] = []
+var _next_spark := 0
 var _platform: Node3D
 var _flash: OmniLight3D
 var _core_mat: StandardMaterial3D
@@ -121,10 +131,11 @@ var _hud: RunHud
 
 func _ready() -> void:
 	get_tree().quit_on_go_back = false
-	RunArt.environment(self)
+	_camera = RunArt.environment(self)
 	_floor_mat = RunArt.track(self)
-	_pillars = RunArt.pillars(self)
-	_platform = RunArt.platform()
+	_pillars = RunArt.pillars(self, 26, 5.5, 13.0, 12.0)
+	_far_pillars = RunArt.pillars(self, 16, 18.0, 34.0, 30.0)
+	_platform = RunArt.platform(Arsenal.owned_loadout(Save.data), _stats.color)
 	_platform.position.y = 0.6
 	add_child(_platform)
 	_flash = _platform.get_node("Muzzle/Flash") as OmniLight3D
@@ -136,6 +147,10 @@ func _ready() -> void:
 		var particles := RunArt.explosion(color)
 		add_child(particles)
 		_explosions.append(particles)
+	for i in 10:
+		var spark := RunArt.spark(_stats.color)
+		add_child(spark)
+		_sparks.append(spark)
 
 	_hud = RunHud.new()
 	add_child(_hud)
@@ -151,6 +166,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	get_tree().quit_on_go_back = true
+	Engine.time_scale = 1.0
 
 
 ## Android back toggles the pause menu. Leaving the app pauses the run (plan 4.1).
@@ -268,6 +284,7 @@ func _hurt(amount: int) -> void:
 		return
 	_shield -= amount
 	_invulnerable = INVULNERABLE_TIME
+	_shake = 0.5
 	_hud.set_shield(_shield, MAX_SHIELD)
 	if _shield <= 0:
 		_lose()
@@ -312,6 +329,7 @@ func _bullet_survives(bullet: Bullet, prev_z: float) -> bool:
 			return _bullet_hit_enemy(bullet, enemy)
 	if _state == State.BOSS and absf(bullet.pos.x - _boss.position.x) < BOSS_HALF_WIDTH + bullet.radius \
 			and far_z < _boss.position.z + 1.0:
+		_spark(bullet.pos)
 		_damage_boss(_roll_damage(bullet.damage))
 		return false
 	for gate in _gates:
@@ -328,6 +346,7 @@ func _bullet_survives(bullet: Bullet, prev_z: float) -> bool:
 func _bullet_hit_enemy(bullet: Bullet, enemy: Enemy) -> bool:
 	var pos := enemy.node.position
 	var damage := _roll_damage(bullet.damage)
+	_spark(bullet.pos)
 	var chained: Enemy = _nearest_enemy(pos, enemy, CHAIN_RANGE, false) if _stats.chain > 0.0 else null
 	if _stats.slow > 0.0:
 		enemy.slow_time = SLOW_TIME
@@ -420,6 +439,8 @@ func _spawn_enemies(event: Dictionary, z: float) -> void:
 		enemy.coins = def["coins"]
 		enemy.timer = randf_range(0.5, 1.5)
 		enemy.node = RunArt.enemy(kind)
+		enemy.shell = (enemy.node.get_node("Shell") as MeshInstance3D).material_override as StandardMaterial3D
+		enemy.glow = enemy.shell.emission_energy_multiplier
 		var column := i % columns
 		var x := clampf(centre + (column - (columns - 1) * 0.5) * spacing, -TRACK_HALF, TRACK_HALF)
 		enemy.target_x = x
@@ -451,6 +472,7 @@ func _update_enemies(delta: float) -> void:
 				pos.y = enemy.radius + 0.3 + absf(pos.x - enemy.target_x) * 0.6
 		enemy.pulse = maxf(enemy.pulse - delta * 6.0, 0.0)
 		enemy.node.scale = Vector3.ONE * (1.0 + 0.2 * enemy.pulse)
+		enemy.shell.emission_energy_multiplier = enemy.glow + enemy.pulse * 4.0
 		enemy.node.position = pos
 		if _playing() and absf(pos.z) < enemy.radius + 0.5 and absf(pos.x - _platform.position.x) < enemy.radius + PLAYER_RADIUS:
 			_hurt(enemy.damage)
@@ -573,6 +595,7 @@ func _side_color(side: Dictionary) -> Color:
 
 func _spawn_boss(z: float) -> void:
 	_boss = RunArt.boss()
+	_boss_shell = (_boss.get_node("Shell") as MeshInstance3D).material_override as StandardMaterial3D
 	_boss.position = Vector3(0.0, 1.6, z)
 	_boss_hp = LevelData.BOSS_HP
 	add_child(_boss)
@@ -610,7 +633,13 @@ func _update_boss(delta: float) -> void:
 	_boss.position.x = sin(_time * 0.6) * 1.0
 	_boss_pulse = maxf(_boss_pulse - delta * 8.0, 0.0)
 	_boss.scale = Vector3.ONE * (1.0 + 0.03 * _boss_pulse)
+	_boss_shell.emission_energy_multiplier = 0.05 + _boss_pulse * 3.0
 	var enraged := _boss_hp < LevelData.BOSS_HP * 0.5
+	if enraged and not _enraged:
+		_enraged = true
+		_shake = 0.6
+		_hud.toast("PHASE 2", RunArt.RED)
+		_slow_motion(0.35, 0.6)
 	_boss_attack -= delta
 	if _boss_attack <= 0.0:
 		_boss_attack = 1.4 if enraged else 2.2
@@ -659,6 +688,8 @@ func _update_orbs(delta: float) -> void:
 
 func _win() -> void:
 	_state = State.WON
+	_shake = 1.0
+	_slow_motion(0.25, 0.9)
 	_add_coins(LevelData.BOSS_COINS + LevelData.WIN_COINS)
 	for offset: Vector3 in [Vector3.ZERO, Vector3(-1.5, 0.5, 0.0), Vector3(1.5, -0.3, 0.0), Vector3(0.0, 1.0, 0.5)]:
 		_explode(_boss.position + offset)
@@ -715,6 +746,27 @@ func _update_scenery(delta: float) -> void:
 		pillar.position.z += _scroll * delta
 		if pillar.position.z > 8.0:
 			pillar.position.z -= 110.0
+	for pillar in _far_pillars:
+		pillar.position.z += _scroll * 0.5 * delta
+		if pillar.position.z > 8.0:
+			pillar.position.z -= 110.0
+	_shake = maxf(_shake - delta * 2.5, 0.0)
+	_camera.h_offset = randf_range(-1.0, 1.0) * _shake * 0.2
+	_camera.v_offset = randf_range(-1.0, 1.0) * _shake * 0.2
+
+
+## Short slow motion for boss moments (plan 11.1). The timer ignores the time scale.
+func _slow_motion(factor: float, seconds: float) -> void:
+	Engine.time_scale = factor
+	await get_tree().create_timer(seconds, true, false, true).timeout
+	Engine.time_scale = 1.0
+
+
+func _spark(pos: Vector3) -> void:
+	var particles := _sparks[_next_spark]
+	_next_spark = (_next_spark + 1) % _sparks.size()
+	particles.global_position = pos
+	particles.restart()
 
 
 func _explode(pos: Vector3) -> void:
