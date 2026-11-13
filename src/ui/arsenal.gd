@@ -118,12 +118,14 @@ func _cycle(slot: String, step: int) -> void:
 
 func _unlock(slot: String) -> void:
 	if Arsenal.buy_part(Save.data, slot, _shown[slot]):
+		Audio.play("ui_buy")
 		_equip(slot)
 		refresh()
 
 
 func _upgrade(stat: String) -> void:
 	if Arsenal.buy_upgrade(Save.data, _loadout["chassis"], stat):
+		Audio.play("ui_buy")
 		Save.save()
 		refresh()
 

@@ -89,7 +89,8 @@ var _distance := 0.0
 var _scroll := SPEED
 var _state := State.RUNNING
 var _time := 0.0
-var _stats := Arsenal.equipped_stats(Save.data)
+var _loadout := Arsenal.owned_loadout(Save.data)
+var _stats := Arsenal.stats_for(Save.data, _loadout)
 var _shield := MAX_SHIELD
 var _invulnerable := 0.0
 var _kills := 0
@@ -135,7 +136,7 @@ func _ready() -> void:
 	_floor_mat = RunArt.track(self)
 	_pillars = RunArt.pillars(self, 26, 5.5, 13.0, 12.0)
 	_far_pillars = RunArt.pillars(self, 16, 18.0, 34.0, 30.0)
-	_platform = RunArt.platform(Arsenal.owned_loadout(Save.data), _stats.color)
+	_platform = RunArt.platform(_loadout, _stats.color)
 	_platform.position.y = 0.6
 	add_child(_platform)
 	_flash = _platform.get_node("Muzzle/Flash") as OmniLight3D
@@ -261,6 +262,7 @@ func _fire_volley() -> void:
 		else:
 			_spawn_bullet(origin + Vector3(offset * BULLET_SPACING, 0.0, 0.0), 0.0, _stats.damage, _stats.split)
 	_flash.light_energy = 5.0
+	Audio.shot(_loadout["chassis"], _loadout["core"])
 
 
 ## angle in radians from straight ahead, positive to the right. Returns null when the pool is full.
@@ -285,6 +287,7 @@ func _hurt(amount: int) -> void:
 	_shield -= amount
 	_invulnerable = INVULNERABLE_TIME
 	_shake = 0.5
+	Audio.play("hurt")
 	_hud.set_shield(_shield, MAX_SHIELD)
 	if _shield <= 0:
 		_lose()
@@ -377,7 +380,10 @@ func _bullet_hit_enemy(bullet: Bullet, enemy: Enemy) -> bool:
 
 
 func _roll_damage(base: float) -> float:
-	return base * CRIT_MULTIPLIER if _stats.crit > 0.0 and randf() < _stats.crit else base
+	if _stats.crit > 0.0 and randf() < _stats.crit:
+		Audio.play("crit")
+		return base * CRIT_MULTIPLIER
+	return base
 
 
 func _steer_homing(bullet: Bullet, delta: float) -> void:
@@ -495,6 +501,7 @@ func _damage_enemy(enemy: Enemy, amount: float) -> void:
 	enemy.pulse = 1.0
 	if enemy.hp <= 0.0 and enemy in _enemies:
 		_kills += 1
+		Audio.play("enemy_down")
 		_add_coins(enemy.coins)
 		_explode(enemy.node.position)
 		_remove_enemy(enemy)
@@ -512,6 +519,7 @@ func _count_leech() -> void:
 			_shield += 1
 			_hud.set_shield(_shield, MAX_SHIELD)
 			_hud.toast("+1 SCHILD", RunArt.CYAN)
+			Audio.play("shield")
 
 
 func _remove_enemy(enemy: Enemy) -> void:
@@ -556,6 +564,7 @@ func _pass_gate(side: Dictionary) -> void:
 		lines.append(WeaponStats.describe(effect))
 	_hud.set_stats(_stats)
 	_hud.toast("\n".join(lines), _side_color(side))
+	Audio.play("gate_bad" if _side_color(side) == RunArt.RED else "gate_good")
 
 
 func _grow_gate(gate: Gate, side: int) -> void:
@@ -566,6 +575,7 @@ func _grow_gate(gate: Gate, side: int) -> void:
 	var effect: Array = data["effects"][0]
 	effect[2] = minf(float(effect[2]) + float(data["grow"]), float(data["max"]))
 	gate.labels[side].text = _side_text(data)
+	Audio.play("gate_grow")
 
 
 func _side_text(side: Dictionary) -> String:
@@ -611,6 +621,7 @@ func _update_boss(delta: float) -> void:
 			if _state == State.BOSS:
 				var orb := RunArt.orb()
 				orb.position = Vector3(telegraph.x, 0.7, _boss.position.z + 1.5)
+				Audio.play("boss_shot")
 				add_child(orb)
 				_orbs.append(orb)
 			telegraph.node.queue_free()
@@ -639,6 +650,7 @@ func _update_boss(delta: float) -> void:
 		_enraged = true
 		_shake = 0.6
 		_hud.toast("PHASE 2", RunArt.RED)
+		Audio.play("phase")
 		_slow_motion(0.35, 0.6)
 	_boss_attack -= delta
 	if _boss_attack <= 0.0:
@@ -655,6 +667,7 @@ func _update_boss(delta: float) -> void:
 
 
 func _telegraph(lane: float) -> void:
+	Audio.play("boss_warn")
 	var telegraph := Telegraph.new()
 	telegraph.x = lane
 	telegraph.node = RunArt.lane_marker(-BOSS_STOP_Z)
@@ -689,6 +702,7 @@ func _update_orbs(delta: float) -> void:
 func _win() -> void:
 	_state = State.WON
 	_shake = 1.0
+	Audio.play("explosion")
 	_slow_motion(0.25, 0.9)
 	_add_coins(LevelData.BOSS_COINS + LevelData.WIN_COINS)
 	for offset: Vector3 in [Vector3.ZERO, Vector3(-1.5, 0.5, 0.0), Vector3(1.5, -0.3, 0.0), Vector3(0.0, 1.0, 0.5)]:
@@ -707,6 +721,7 @@ func _win() -> void:
 
 func _lose() -> void:
 	_state = State.LOST
+	Audio.play("explosion")
 	_explode(_platform.position)
 	_platform.hide()
 	_scroll = 0.0
@@ -729,6 +744,7 @@ func _show_result_later(won: bool) -> void:
 		"Schaden pro Sekunde %s" % WeaponStats.format_number(roundf(_stats.dps())),
 	]
 	await get_tree().create_timer(1.2).timeout
+	Audio.play("win" if won else "lose")
 	_hud.show_result(won, _coins, int(Save.data["coins"]), "\n".join(lines))
 
 
@@ -763,6 +779,7 @@ func _slow_motion(factor: float, seconds: float) -> void:
 
 
 func _spark(pos: Vector3) -> void:
+	Audio.play("hit")
 	var particles := _sparks[_next_spark]
 	_next_spark = (_next_spark + 1) % _sparks.size()
 	particles.global_position = pos
