@@ -245,11 +245,12 @@ func _refresh_profile() -> void:
 
 func _build_update_panel() -> void:
 	_update_panel = PanelContainer.new()
-	_update_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_update_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_update_panel.offset_left = 24.0
 	_update_panel.offset_right = -24.0
-	_update_panel.offset_bottom = -150.0
-	_update_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	# Below the header, so it never covers the play button in the thumb zone.
+	_update_panel.offset_top = 136.0
+	_update_panel.grow_vertical = Control.GROW_DIRECTION_END
 	var style := (get_theme_stylebox("panel", "PanelContainer") as StyleBoxFlat).duplicate() as StyleBoxFlat
 	style.border_color = Color(RunArt.CYAN, 0.6)
 	style.set_border_width_all(2)
