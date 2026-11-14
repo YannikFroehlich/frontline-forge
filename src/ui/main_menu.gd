@@ -15,8 +15,11 @@ var _pages: Dictionary = {}
 var _tab_buttons: Dictionary = {}
 var _current := ""
 var _coins: Label
-var _level_best: Label
+var _level_title: Label
+var _level_info: Label
+var _level_stars: Label
 var _weapon_line: Label
+var _level_buttons: Dictionary = {}
 var _profile_stats: Label
 
 var _update_panel: PanelContainer
@@ -154,31 +157,50 @@ func _tab_bar() -> Control:
 	return bar
 
 
+## Level grid of the world (plan 9.1 level selection), details of the chosen level and the play button.
 func _play_page() -> Control:
 	var page := VBoxContainer.new()
-	page.add_theme_constant_override("separation", 16)
-	var top_space := Control.new()
-	top_space.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	page.add_child(top_space)
-	var logo := TextureRect.new()
-	logo.texture = ICON
-	logo.custom_minimum_size = Vector2(220.0, 220.0)
-	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	page.add_child(logo)
-	var level := _label(str(LevelData.LEVEL_1["name"]).to_upper(), "TitleLabel")
-	level.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	page.add_child(level)
-	_level_best = _label("", "CaptionLabel")
-	_level_best.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	page.add_child(_level_best)
-	_weapon_line = _label("")
-	_weapon_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	page.add_theme_constant_override("separation", 14)
+	var world := _label(Campaign.world_name().to_upper(), "CaptionLabel")
+	page.add_child(world)
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	page.add_child(grid)
+	var group := ButtonGroup.new()
+	for entry: Dictionary in Campaign.levels():
+		var id: String = entry["id"]
+		var button := Button.new()
+		button.toggle_mode = true
+		button.button_group = group
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size = Vector2(0.0, 112.0)
+		button.add_theme_font_size_override("font_size", 24)
+		button.pressed.connect(_select_level.bind(id))
+		grid.add_child(button)
+		_level_buttons[id] = button
+
+	var details := PanelContainer.new()
+	page.add_child(details)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	details.add_child(box)
+	_level_title = _label("", "TitleLabel")
+	box.add_child(_level_title)
+	_level_info = _label("", "CaptionLabel")
+	box.add_child(_level_info)
+	_level_stars = _label("")
+	_level_stars.add_theme_font_size_override("font_size", 22)
+	_level_stars.add_theme_constant_override("line_spacing", 4)
+	box.add_child(_level_stars)
+	_weapon_line = _label("", "CaptionLabel")
 	_weapon_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	page.add_child(_weapon_line)
-	var bottom_space := Control.new()
-	bottom_space.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	page.add_child(bottom_space)
+	box.add_child(_weapon_line)
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page.add_child(spacer)
 	if Save.restored_from_backup:
 		var notice := _label("Der Spielstand war beschädigt und wurde aus einer Sicherung wiederhergestellt.")
 		notice.add_theme_color_override("font_color", RunArt.AMBER)
@@ -194,6 +216,11 @@ func _play_page() -> Control:
 	play.pressed.connect(get_tree().change_scene_to_file.bind("res://scenes/run.tscn"))
 	page.add_child(play)
 	return page
+
+
+func _select_level(id: String) -> void:
+	Campaign.selected = id
+	_refresh_play()
 
 
 func _profile_page() -> Control:
@@ -215,15 +242,41 @@ func _profile_page() -> Control:
 
 
 func _refresh_play() -> void:
-	var level: Dictionary = (Save.data["levels"] as Dictionary).get(LevelData.LEVEL_1["id"], {})
-	_level_best.text = "Bestzeit %s" % _format_time(float(level["best_time"])) if level.has("best_time") \
-			else "Noch nicht geschafft"
+	if Campaign.selected == "" or not Campaign.is_unlocked(Save.data, Campaign.selected):
+		Campaign.selected = Campaign.first_open(Save.data)
+	for id: String in _level_buttons:
+		var button: Button = _level_buttons[id]
+		var unlocked := Campaign.is_unlocked(Save.data, id)
+		var mask := int(Campaign.level_state(Save.data, id).get("stars", 0))
+		button.disabled = not unlocked
+		button.text = "%d\n%s" % [Campaign.number(id), Campaign.stars_text(mask) if unlocked else "–"]
+		button.set_pressed_no_signal(id == Campaign.selected)
+		if Campaign.is_boss(id):
+			button.add_theme_color_override("font_color", RunArt.MAGENTA)
+		elif Campaign.special_name(id) != "":
+			button.add_theme_color_override("font_color", RunArt.AMBER)
+
+	var selected := Campaign.selected
+	var state := Campaign.level_state(Save.data, selected)
+	var tags: PackedStringArray = []
+	if Campaign.is_boss(selected):
+		tags.append("Boss")
+	if Campaign.special_name(selected) != "":
+		tags.append(Campaign.special_name(selected))
+	tags.append("Bestzeit %s" % _format_time(float(state["best_time"])) if state.has("best_time") else "Noch nicht geschafft")
+	_level_title.text = "LEVEL %d" % Campaign.number(selected)
+	_level_info.text = " · ".join(tags)
+	var mask := int(state.get("stars", 0))
+	var lines: PackedStringArray = []
+	for i in 3:
+		lines.append("%s %s" % ["★" if mask & (1 << i) else "☆", Campaign.STAR_TEXTS[i]])
+	_level_stars.text = "\n".join(lines)
 	var names: PackedStringArray = []
 	var loadout := Arsenal.owned_loadout(Save.data)
 	for slot: String in Parts.SLOTS:
 		if loadout[slot] != "none":
 			names.append(Parts.table(slot)[loadout[slot]]["name"])
-	_weapon_line.text = " · ".join(names)
+	_weapon_line.text = "Waffe: " + " · ".join(names)
 
 
 func _refresh_profile() -> void:
@@ -235,10 +288,10 @@ func _refresh_profile() -> void:
 			total += 1
 			if Arsenal.is_owned(Save.data, slot, id):
 				owned += 1
-	var level: Dictionary = (Save.data["levels"] as Dictionary).get(LevelData.LEVEL_1["id"], {})
-	_profile_stats.text = "Läufe  %d\nSiege  %d\nZerstörte Gegner  %d\nMünzen  %d\nTeile  %d / %d\nBestzeit %s  %s" % [
-		int(stats["runs"]), int(stats["wins"]), int(stats["kills"]), int(Save.data["coins"]), owned, total,
-		LevelData.LEVEL_1["name"], _format_time(float(level["best_time"])) if level.has("best_time") else "–"]
+	var level_count := Campaign.levels().size()
+	_profile_stats.text = "Level geschafft  %d / %d\nSterne  %d / %d\nLäufe  %d\nSiege  %d\nZerstörte Gegner  %d\nMünzen  %d\nTeile  %d / %d" % [
+		Campaign.cleared_count(Save.data), level_count, Campaign.total_stars(Save.data), level_count * 3,
+		int(stats["runs"]), int(stats["wins"]), int(stats["kills"]), int(Save.data["coins"]), owned, total]
 
 
 # --- Update panel -----------------------------------------------------------

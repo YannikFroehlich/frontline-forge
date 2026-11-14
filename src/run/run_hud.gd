@@ -8,6 +8,7 @@ signal pause_pressed
 signal resume_pressed
 signal restart_pressed
 signal arsenal_pressed
+signal next_pressed
 
 const TEXT := Color(0.8, 0.84, 0.9)
 const DIM := Color(0.6, 0.65, 0.75)
@@ -26,6 +27,9 @@ var _result_title: Label
 var _result_text: Label
 var _result_coins: Label
 var _result_total: Label
+var _result_stars: Label
+var _result_next: Button
+var _result_again: Button
 var _coins: Label
 var _pause: PanelContainer
 
@@ -149,7 +153,7 @@ func show_pause(paused: bool) -> void:
 	_pause.visible = paused
 
 
-func show_result(won: bool, earned: int, total: int, text: String) -> void:
+func show_result(won: bool, earned: int, total: int, text: String, stars: int, has_next: bool) -> void:
 	_boss_title.hide()
 	_boss_bar.hide()
 	_result_title.text = "SEKTOR GESICHERT" if won else "PLATTFORM ZERSTÖRT"
@@ -157,16 +161,23 @@ func show_result(won: bool, earned: int, total: int, text: String) -> void:
 	_result_coins.text = "+%d ◆" % earned
 	_result_total.text = "Gesamt %d Münzen" % total
 	_result_text.text = text
+	_result_stars.text = Campaign.stars_text(stars)
+	_result_stars.visible = won
+	_result_next.visible = has_next
+	_result_again.theme_type_variation = "" if has_next else "PrimaryButton"
 	_result.show()
 
 
 func _build_result() -> void:
-	_result = _overlay_panel(350.0)
+	_result = _overlay_panel(450.0)
 	var box := _result.get_child(0) as VBoxContainer
 	_result_title = _label(40, RunArt.GREEN)
 	_result_title.theme_type_variation = "TitleLabel"
 	_result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_result_title)
+	_result_stars = _label(64, RunArt.AMBER)
+	_result_stars.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_result_stars)
 	_result_coins = _label(56, RunArt.AMBER)
 	_result_coins.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_result_coins)
@@ -176,9 +187,12 @@ func _build_result() -> void:
 	_result_text = _label(24, TEXT)
 	_result_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_result_text)
-	var again := _button("Nochmal", true)
-	again.pressed.connect(restart_pressed.emit)
-	box.add_child(again)
+	_result_next = _button("Weiter", true)
+	_result_next.pressed.connect(next_pressed.emit)
+	box.add_child(_result_next)
+	_result_again = _button("Nochmal", true)
+	_result_again.pressed.connect(restart_pressed.emit)
+	box.add_child(_result_again)
 	var arsenal := _button("Arsenal", false)
 	arsenal.pressed.connect(arsenal_pressed.emit)
 	box.add_child(arsenal)

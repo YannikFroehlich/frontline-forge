@@ -12,7 +12,11 @@ Alle Stücke stammen von Juhani Junkala (SubspaceAudio) und stehen unter **CC0 1
 | `level_army_approaching.ogg` | Level | `Action2 - Army Approaching.ogg` | https://opengameart.org/content/jrpg-pack-5-action |
 | `boss_epic_battle.ogg` | Boss | `Juhani Junkala - Epic Boss Battle [Seamlessly Looping].wav` | https://opengameart.org/content/boss-battle-music |
 
-Bearbeitung: `boss_epic_battle.ogg` wurde mit ffmpeg von WAV nach Ogg Vorbis (Qualität 5) umgewandelt. Die anderen Dateien sind unverändert, nur umbenannt.
+Bearbeitung:
+
+- `boss_epic_battle.ogg` wurde mit ffmpeg von WAV nach Ogg Vorbis (Qualität 5) umgewandelt.
+- Bei `menu_theme.ogg` wurden mit ffmpeg nur die Metadaten entfernt (ein fehlerhafter Kommentar löste eine Godot-Warnung aus). Der Ton ist unverändert, nicht neu kodiert.
+- `level_army_approaching.ogg` ist unverändert, nur umbenannt.
 
 ## Schriften
 

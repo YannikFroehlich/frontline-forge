@@ -1,0 +1,43 @@
+{
+	"_doc": "Gate presets. Each side lists effects [stat, op, value]. A shootable side adds grow, per_hits and max: every per_hits hits the first effect grows by grow up to max.",
+	"dmg_or_rate": {
+		"left": {"effects": [["damage", "add", 5]]},
+		"right": {"effects": [["fire_rate", "add", 2]]}
+	},
+	"proj_or_dmg": {
+		"left": {"effects": [["projectiles", "add", 1]]},
+		"right": {"effects": [["damage", "mul", 1.5]]}
+	},
+	"dmg_or_bad": {
+		"left": {"effects": [["damage", "add", 8]]},
+		"right": {"effects": [["fire_rate", "mul", 0.7]]}
+	},
+	"bad_or_proj": {
+		"left": {"effects": [["damage", "add", -3]]},
+		"right": {"effects": [["projectiles", "add", 1]]}
+	},
+	"shoot_proj": {
+		"left": {"effects": [["projectiles", "add", 0]], "grow": 1, "per_hits": 20, "max": 3},
+		"right": {"effects": [["fire_rate", "add", 1]]}
+	},
+	"shoot_dmg": {
+		"left": {"effects": [["damage", "add", 1]]},
+		"right": {"effects": [["damage", "add", 0]], "grow": 2, "per_hits": 8, "max": 14}
+	},
+	"risk_dmg": {
+		"left": {"effects": [["damage", "mul", 2], ["fire_rate", "mul", 0.6]]},
+		"right": {"effects": [["fire_rate", "add", 3]]}
+	},
+	"rate_or_proj": {
+		"left": {"effects": [["fire_rate", "mul", 1.5]]},
+		"right": {"effects": [["projectiles", "add", 2]]}
+	},
+	"risk_proj": {
+		"left": {"effects": [["projectiles", "add", 3], ["damage", "mul", 0.6]]},
+		"right": {"effects": [["damage", "add", 10]]}
+	},
+	"big_choice": {
+		"left": {"effects": [["damage", "mul", 1.8]]},
+		"right": {"effects": [["fire_rate", "mul", 1.8]]}
+	}
+}

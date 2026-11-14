@@ -81,12 +81,15 @@ class Telegraph:
 	var time_left := TELEGRAPH_TIME
 
 
-var _level: Dictionary = LevelData.LEVEL_1
-var _events: Array = _level["events"]
-var _length: float = _level["length"]
+var _level_id := Campaign.selected if Campaign.selected != "" else Campaign.first_open(Save.data)
+var _track := Campaign.build(_level_id)
+var _events: Array = _track["events"]
+var _length: float = _track["length"]
+var _speed := SPEED * (Campaign.RUSH_SPEED if _track["special"] == "rush" else 1.0)
+var _damage_taken := 0
 var _next_event := 0
 var _distance := 0.0
-var _scroll := SPEED
+var _scroll := _speed
 var _state := State.RUNNING
 var _time := 0.0
 var _loadout := Arsenal.owned_loadout(Save.data)
@@ -159,11 +162,14 @@ func _ready() -> void:
 	_hud.pause_pressed.connect(_set_paused.bind(true))
 	_hud.resume_pressed.connect(_set_paused.bind(false))
 	_hud.restart_pressed.connect(_restart)
+	_hud.next_pressed.connect(_next_level)
 	_hud.arsenal_pressed.connect(_open_arsenal)
 	_hud.set_shield(_shield, MAX_SHIELD)
 	_hud.set_stats(_stats)
 	_hud.set_coins(_coins)
 	Audio.music("level")
+	var special := Campaign.special_name(_level_id)
+	_hud.toast("LEVEL %d%s" % [Campaign.number(_level_id), "\n" + special.to_upper() if special != "" else ""], RunArt.CYAN)
 
 
 func _exit_tree() -> void:
@@ -210,6 +216,8 @@ func _process(delta: float) -> void:
 		_update_fire(delta)
 		if _state == State.RUNNING:
 			_hud.set_progress(_distance / _length)
+			if not _track["boss"] and _distance >= _length:
+				_win()
 	_distance += _scroll * delta
 	_update_bullets(delta)
 	_update_enemies(delta)
@@ -286,6 +294,7 @@ func _hurt(amount: int) -> void:
 	if _invulnerable > 0.0 or not _playing():
 		return
 	_shield -= amount
+	_damage_taken += amount
 	_invulnerable = INVULNERABLE_TIME
 	_shake = 0.5
 	Audio.play("hurt")
@@ -439,7 +448,7 @@ func _spawn_enemies(event: Dictionary, z: float) -> void:
 	for i in count:
 		var enemy := Enemy.new()
 		enemy.kind = kind
-		enemy.hp = def["hp"]
+		enemy.hp = float(def["hp"]) * Campaign.hp_scale(_level_id)
 		enemy.speed = def["speed"]
 		enemy.radius = def["radius"]
 		enemy.damage = def["damage"]
@@ -701,24 +710,27 @@ func _update_orbs(delta: float) -> void:
 
 # --- End of run -------------------------------------------------------------
 
+## Level cleared: boss destroyed, or the finish line passed in a level without boss.
 func _win() -> void:
 	_state = State.WON
-	_shake = 1.0
-	Audio.play("explosion")
 	Audio.music("")
-	_slow_motion(0.25, 0.9)
-	_add_coins(LevelData.BOSS_COINS + LevelData.WIN_COINS)
-	for offset: Vector3 in [Vector3.ZERO, Vector3(-1.5, 0.5, 0.0), Vector3(1.5, -0.3, 0.0), Vector3(0.0, 1.0, 0.5)]:
-		_explode(_boss.position + offset)
-	_boss.queue_free()
-	_boss = null
+	_add_coins(Campaign.win_coins(_level_id))
+	if _boss != null:
+		_shake = 1.0
+		Audio.play("explosion")
+		_slow_motion(0.25, 0.9)
+		_add_coins(LevelData.BOSS_COINS)
+		for offset: Vector3 in [Vector3.ZERO, Vector3(-1.5, 0.5, 0.0), Vector3(1.5, -0.3, 0.0), Vector3(0.0, 1.0, 0.5)]:
+			_explode(_boss.position + offset)
+		_boss.queue_free()
+		_boss = null
 	for enemy: Enemy in _enemies.duplicate():
 		_explode(enemy.node.position)
 		_remove_enemy(enemy)
 	for orb in _orbs:
 		orb.queue_free()
 	_orbs.clear()
-	_scroll = SPEED
+	_scroll = _speed
 	_show_result_later(true)
 
 
@@ -740,16 +752,23 @@ func _add_coins(amount: int) -> void:
 ## Books the run into the save before the result appears, so closing the app then loses nothing.
 ## Aborting with the back button gives nothing.
 func _show_result_later(won: bool) -> void:
-	var new_best: bool = Save.record_run(Save.data, _level["id"], won, _coins, _kills, _time)
+	var stars := Campaign.star_mask(won, _damage_taken, _kills, _track["enemies"])
+	var new_best: bool = Save.record_run(Save.data, _level_id, won, _coins, _kills, _time, stars)
 	Save.save()
 	var lines: PackedStringArray = [
-		"Zeit %s%s" % [_format_time(_time), "  · neue Bestzeit" if new_best else ""],
+		"Level %d · Zeit %s%s" % [Campaign.number(_level_id), _format_time(_time), "  · neue Bestzeit" if new_best else ""],
 		"Zerstört %d · Schild %d/%d" % [_kills, maxi(_shield, 0), MAX_SHIELD],
 		"Schaden pro Sekunde %s" % WeaponStats.format_number(roundf(_stats.dps())),
 	]
 	await get_tree().create_timer(1.2).timeout
 	Audio.play("win" if won else "lose")
-	_hud.show_result(won, _coins, int(Save.data["coins"]), "\n".join(lines))
+	var has_next := won and Campaign.next_id(_level_id) != ""
+	_hud.show_result(won, _coins, int(Save.data["coins"]), "\n".join(lines), stars, has_next)
+
+
+func _next_level() -> void:
+	Campaign.selected = Campaign.next_id(_level_id)
+	_restart()
 
 
 static func _format_time(seconds: float) -> String:

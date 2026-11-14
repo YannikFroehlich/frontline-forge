@@ -37,8 +37,10 @@ static func default_data() -> Dictionary:
 	}
 
 
-## Books a finished run into the save data. Returns true for a new best time.
-static func record_run(save_data: Dictionary, level: String, won: bool, coins: int, kills: int, time: float) -> bool:
+## Books a finished run into the save data. stars is a bit mask (see Campaign), earned stars are kept
+## across runs. Returns true for a new best time.
+static func record_run(save_data: Dictionary, level: String, won: bool, coins: int, kills: int, time: float,
+		stars: int = 0) -> bool:
 	save_data["coins"] = int(save_data["coins"]) + coins
 	var stats: Dictionary = save_data["stats"]
 	stats["runs"] = int(stats["runs"]) + 1
@@ -49,6 +51,7 @@ static func record_run(save_data: Dictionary, level: String, won: bool, coins: i
 	var levels: Dictionary = save_data["levels"]
 	var entry: Dictionary = levels.get_or_add(level, {})
 	entry["cleared"] = true
+	entry["stars"] = int(entry.get("stars", 0)) | stars
 	if time < float(entry.get("best_time", INF)):
 		entry["best_time"] = time
 		return true
