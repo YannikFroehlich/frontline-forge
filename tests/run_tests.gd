@@ -2,7 +2,8 @@ extends SceneTree
 ## Minimal test runner, no framework needed:
 ##   godot --headless --path . -s tests/run_tests.gd
 ## Runs every test_* method of tests/unit/test_*.gd. Exit code 1 on any failure.
-# ponytail: own runner instead of GUT, switch to GUT if fixtures or mocks become necessary.
+# ponytail: own runner instead of GUT. Runtime errors inside a test are logged but not counted;
+# switch to GUT if that or fixtures and mocks become necessary.
 
 const UNIT_DIR := "res://tests/unit/"
 
@@ -14,6 +15,10 @@ func _init() -> void:
 		if not (file.begins_with("test_") and file.ends_with(".gd")):
 			continue
 		var script: GDScript = load(UNIT_DIR + file)
+		if script == null or not script.can_instantiate():
+			failed += 1
+			printerr("FAIL %s :: kompiliert nicht" % file)
+			continue
 		for method: Dictionary in script.get_script_method_list():
 			var test_name: String = method["name"]
 			if not test_name.begins_with("test_"):

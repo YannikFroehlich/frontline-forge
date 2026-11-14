@@ -52,3 +52,8 @@ func test_is_good() -> void:
 	check(WeaponStats.is_good(["damage", "add", 1.0]), "+1 gut")
 	check(not WeaponStats.is_good(["damage", "add", 0.0]), "+0 nicht gut")
 	check(not WeaponStats.is_good(["fire_rate", "mul", 0.6]), "x0,6 schlecht")
+
+
+func test_format_number_hides_float_noise() -> void:
+	check_eq(WeaponStats.format_number(10.0 * 0.7 * 1.6 * 1.428571), "16", "Rundungsrest")
+	check_eq(WeaponStats.format_number(5.6), "5,6", "Eine Nachkommastelle")

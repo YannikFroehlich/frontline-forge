@@ -1,10 +1,13 @@
 class_name RunHud
 extends CanvasLayer
-## HUD of the M1 prototype: progress or boss bar, shield, weapon values, gate messages, result screen.
-# ponytail: built in code with inline styles. Becomes a proper scene with theme.tres in the UI milestone.
+## Run HUD: progress or boss bar, shield, coins, weapon values, gate messages, pause and result screen.
+## Keeps running while the tree is paused, so the pause menu stays usable.
 
 signal back_pressed
+signal pause_pressed
+signal resume_pressed
 signal restart_pressed
+signal arsenal_pressed
 
 const TEXT := Color(0.8, 0.84, 0.9)
 const DIM := Color(0.6, 0.65, 0.75)
@@ -21,14 +24,19 @@ var _fps: Label
 var _result: PanelContainer
 var _result_title: Label
 var _result_text: Label
+var _result_coins: Label
+var _result_total: Label
+var _coins: Label
+var _pause: PanelContainer
 
 
 func _ready() -> void:
-	var back := _button("✕", false)
-	back.position = Vector2(24.0, 56.0)
-	back.custom_minimum_size = Vector2(80.0, 72.0)
-	back.pressed.connect(back_pressed.emit)
-	add_child(back)
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	var pause := _button("II", false)
+	pause.position = Vector2(24.0, 56.0)
+	pause.custom_minimum_size = Vector2(80.0, 72.0)
+	pause.pressed.connect(pause_pressed.emit)
+	add_child(pause)
 
 	_progress = _bar(RunArt.CYAN)
 	_progress.anchor_right = 1.0
@@ -46,6 +54,15 @@ func _ready() -> void:
 	_shield.offset_top = 66.0
 	_shield.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_shield)
+
+	_coins = _label(28, RunArt.AMBER)
+	_coins.anchor_left = 1.0
+	_coins.anchor_right = 1.0
+	_coins.offset_left = -170.0
+	_coins.offset_right = -24.0
+	_coins.offset_top = 116.0
+	_coins.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	add_child(_coins)
 
 	_boss_title = _label(26, RunArt.MAGENTA)
 	_boss_title.text = "WÄCHTER"
@@ -88,6 +105,7 @@ func _ready() -> void:
 	add_child(_fps)
 
 	_build_result()
+	_build_pause()
 
 
 func _process(delta: float) -> void:
@@ -123,48 +141,94 @@ func toast(text: String, color: Color) -> void:
 	_toast_time = 1.6
 
 
-func show_result(won: bool, text: String) -> void:
+func set_coins(value: int) -> void:
+	_coins.text = "◆ %d" % value
+
+
+func show_pause(paused: bool) -> void:
+	_pause.visible = paused
+
+
+func show_result(won: bool, earned: int, total: int, text: String) -> void:
 	_boss_title.hide()
 	_boss_bar.hide()
 	_result_title.text = "SEKTOR GESICHERT" if won else "PLATTFORM ZERSTÖRT"
 	_result_title.add_theme_color_override("font_color", RunArt.GREEN if won else RunArt.RED)
+	_result_coins.text = "+%d ◆" % earned
+	_result_total.text = "Gesamt %d Münzen" % total
 	_result_text.text = text
 	_result.show()
 
 
 func _build_result() -> void:
-	_result = PanelContainer.new()
-	_result.set_anchors_preset(Control.PRESET_CENTER)
-	_result.offset_left = -300.0
-	_result.offset_right = 300.0
-	_result.offset_top = -220.0
-	_result.offset_bottom = 220.0
+	_result = _overlay_panel(350.0)
+	var box := _result.get_child(0) as VBoxContainer
+	_result_title = _label(40, RunArt.GREEN)
+	_result_title.theme_type_variation = "TitleLabel"
+	_result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_result_title)
+	_result_coins = _label(56, RunArt.AMBER)
+	_result_coins.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_result_coins)
+	_result_total = _label(24, DIM)
+	_result_total.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_result_total)
+	_result_text = _label(24, TEXT)
+	_result_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_result_text)
+	var again := _button("Nochmal", true)
+	again.pressed.connect(restart_pressed.emit)
+	box.add_child(again)
+	var arsenal := _button("Arsenal", false)
+	arsenal.pressed.connect(arsenal_pressed.emit)
+	box.add_child(arsenal)
+	var menu := _button("Menü", false)
+	menu.pressed.connect(back_pressed.emit)
+	box.add_child(menu)
+
+
+## Pause menu (plan 9.1). Settings join it with the settings screen.
+func _build_pause() -> void:
+	_pause = _overlay_panel(240.0)
+	var box := _pause.get_child(0) as VBoxContainer
+	var title := _label(44, RunArt.CYAN)
+	title.theme_type_variation = "TitleLabel"
+	title.text = "PAUSE"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+	var resume := _button("Fortsetzen", true)
+	resume.pressed.connect(resume_pressed.emit)
+	box.add_child(resume)
+	var restart := _button("Neustart", false)
+	restart.pressed.connect(restart_pressed.emit)
+	box.add_child(restart)
+	var give_up := _button("Aufgeben", false)
+	give_up.pressed.connect(back_pressed.emit)
+	box.add_child(give_up)
+
+
+## Centered, hidden panel with a VBoxContainer as its only child.
+func _overlay_panel(half_height: float) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -300.0
+	panel.offset_right = 300.0
+	panel.offset_top = -half_height
+	panel.offset_bottom = half_height
 	var style := StyleBoxFlat.new()
 	style.bg_color = PANEL
 	style.border_color = Color(RunArt.CYAN, 0.6)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(12)
 	style.set_content_margin_all(32.0)
-	_result.add_theme_stylebox_override("panel", style)
-	_result.hide()
-	add_child(_result)
-
+	panel.add_theme_stylebox_override("panel", style)
+	panel.hide()
+	add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 24)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	_result.add_child(box)
-	_result_title = _label(40, RunArt.GREEN)
-	_result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(_result_title)
-	_result_text = _label(26, TEXT)
-	_result_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(_result_text)
-	var again := _button("Nochmal", true)
-	again.pressed.connect(restart_pressed.emit)
-	box.add_child(again)
-	var menu := _button("Menü", false)
-	menu.pressed.connect(back_pressed.emit)
-	box.add_child(menu)
+	panel.add_child(box)
+	return panel
 
 
 func _label(size: int, color: Color) -> Label:
@@ -194,20 +258,5 @@ func _button(text: String, primary: bool) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(0.0, 80.0)
-	button.add_theme_font_size_override("font_size", 28)
-	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(8)
-	style.set_content_margin_all(16.0)
-	if primary:
-		style.bg_color = RunArt.CYAN
-		button.add_theme_color_override("font_color", Color(0.043, 0.063, 0.125))
-		button.add_theme_color_override("font_pressed_color", Color(0.043, 0.063, 0.125))
-		button.add_theme_color_override("font_hover_color", Color(0.043, 0.063, 0.125))
-	else:
-		style.bg_color = Color(0.0, 0.0, 0.0, 0.35)
-		style.border_color = DIM
-		style.set_border_width_all(2)
-		button.add_theme_color_override("font_color", TEXT)
-	for state: String in ["normal", "hover", "pressed", "focus"]:
-		button.add_theme_stylebox_override(state, style)
+	button.theme_type_variation = "PrimaryButton" if primary else ""
 	return button

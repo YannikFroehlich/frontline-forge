@@ -5,14 +5,17 @@ class_name LevelData
 
 const ENEMIES := {
 	# Swarm: many weak drones.
-	"drone": {"hp": 20.0, "speed": 3.0, "radius": 0.6, "damage": 1},
+	"drone": {"hp": 20.0, "speed": 3.0, "radius": 0.6, "damage": 1, "coins": 1},
 	# Tank: slow, lots of health, two shield points on contact.
-	"tank": {"hp": 320.0, "speed": 1.0, "radius": 1.1, "damage": 2},
+	"tank": {"hp": 320.0, "speed": 1.0, "radius": 1.1, "damage": 2, "coins": 8},
 	# Jumper: hops between the three lanes.
-	"jumper": {"hp": 70.0, "speed": 2.0, "radius": 0.7, "damage": 1},
+	"jumper": {"hp": 70.0, "speed": 2.0, "radius": 0.7, "damage": 1, "coins": 3},
 }
 
 const BOSS_HP := 6000.0
+const BOSS_COINS := 60
+## Bonus for clearing the level, on top of everything destroyed (plan 6.3: about 80 per level).
+const WIN_COINS := 80
 
 ## Events sorted by "at" (metres along the track). Kinds:
 ##   {"enemy": kind, "count": n, "x": centre}
@@ -20,6 +23,7 @@ const BOSS_HP := 6000.0
 ##     shootable side adds "grow", "per_hits", "max": every per_hits hits the first effect grows by grow
 ##   {"boss": true}  must be the last event
 const LEVEL_1 := {
+	"id": "w1_l01",
 	"name": "Sektor 1",
 	"length": 700.0,
 	"events": [
