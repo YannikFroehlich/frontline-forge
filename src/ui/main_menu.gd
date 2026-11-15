@@ -7,7 +7,7 @@ extends Control
 ## Tab to open next time the menu loads, for example "arsenal" from the result page.
 static var start_tab := "play"
 
-const TABS := {"play": "Spielen", "arsenal": "Arsenal", "profile": "Profil"}
+const TABS := {"play": "Spielen", "arsenal": "Arsenal", "profile": "Profil", "options": "Optionen"}
 const BG := Color(0.043, 0.063, 0.125)
 const ICON := preload("res://icon.svg")
 
@@ -56,6 +56,7 @@ func _ready() -> void:
 	_pages["play"] = _play_page()
 	_pages["arsenal"] = ArsenalPage.new()
 	_pages["profile"] = _profile_page()
+	_pages["options"] = SettingsPanel.new()
 	for id: String in TABS:
 		page_area.add_child(_pages[id])
 
@@ -67,7 +68,8 @@ func _ready() -> void:
 	Updates.update_available.connect(_on_update_available)
 	Updates.install_started.connect(_on_install_started)
 	Updates.failed.connect(_on_update_failed)
-	Updates.check()
+	if Settings.get_value("auto_update"):
+		Updates.check()
 	Audio.music("menu")
 
 

@@ -2,8 +2,8 @@ extends SceneTree
 ## Minimal test runner, no framework needed:
 ##   godot --headless --path . -s tests/run_tests.gd
 ## Runs every test_* method of tests/unit/test_*.gd. Exit code 1 on any failure.
-# ponytail: own runner instead of GUT. Runtime errors inside a test are logged but not counted;
-# switch to GUT if that or fixtures and mocks become necessary.
+# ponytail: own runner instead of GUT. A test that aborts before its first check counts as failed;
+# an abort after some checks is only logged. Switch to GUT if fixtures, mocks or that gap matter.
 
 const UNIT_DIR := "res://tests/unit/"
 
@@ -26,6 +26,8 @@ func _init() -> void:
 			var suite: RefCounted = script.new()
 			suite.call(test_name)
 			var errors: PackedStringArray = suite.get("errors")
+			if int(suite.get("checks")) == 0:
+				errors.append("keine Prüfung ausgeführt, Test vermutlich durch Skriptfehler abgebrochen")
 			if errors.is_empty():
 				passed += 1
 			else:

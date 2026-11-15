@@ -26,7 +26,7 @@ func _ready() -> void:
 	env.ambient_light_color = Color(0.4, 0.45, 0.6)
 	env.ambient_light_energy = 2.0
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.glow_enabled = true
+	env.glow_enabled = Settings.quality() >= 1
 	env.glow_intensity = 0.8
 	env.glow_hdr_threshold = 0.9
 	var world := WorldEnvironment.new()

@@ -32,15 +32,16 @@ var _result_next: Button
 var _result_again: Button
 var _coins: Label
 var _pause: PanelContainer
+var _pause_button: Button
+var _settings: Control
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	var pause := _button("II", false)
-	pause.position = Vector2(24.0, 56.0)
-	pause.custom_minimum_size = Vector2(80.0, 72.0)
-	pause.pressed.connect(pause_pressed.emit)
-	add_child(pause)
+	_pause_button = _button("II", false)
+	_pause_button.custom_minimum_size = Vector2(80.0, 72.0)
+	_pause_button.pressed.connect(pause_pressed.emit)
+	add_child(_pause_button)
 
 	_progress = _bar(RunArt.CYAN)
 	_progress.anchor_right = 1.0
@@ -51,21 +52,11 @@ func _ready() -> void:
 	add_child(_progress)
 
 	_shield = _label(36, RunArt.CYAN)
-	_shield.anchor_left = 1.0
-	_shield.anchor_right = 1.0
-	_shield.offset_left = -170.0
-	_shield.offset_right = -24.0
 	_shield.offset_top = 66.0
-	_shield.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_shield)
 
 	_coins = _label(28, RunArt.AMBER)
-	_coins.anchor_left = 1.0
-	_coins.anchor_right = 1.0
-	_coins.offset_left = -170.0
-	_coins.offset_right = -24.0
 	_coins.offset_top = 116.0
-	_coins.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_coins)
 
 	_boss_title = _label(26, RunArt.MAGENTA)
@@ -105,11 +96,60 @@ func _ready() -> void:
 	add_child(_stats)
 
 	_fps = _label(18, DIM)
-	_fps.position = Vector2(24.0, 136.0)
+	_fps.offset_top = 136.0
 	add_child(_fps)
 
 	_build_result()
 	_build_pause()
+	_build_settings()
+	Settings.changed.connect(_apply_layout)
+	_apply_layout()
+
+
+## Left-handed layout (plan 12) swaps the pause button with shield and coins.
+func _apply_layout() -> void:
+	var left_handed: bool = Settings.get_value("left_handed")
+	_place(_pause_button, left_handed, 80.0)
+	_pause_button.offset_top = 56.0
+	_pause_button.offset_bottom = 128.0
+	for label: Label in [_shield, _coins]:
+		_place(label, not left_handed, 146.0)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if not left_handed else HORIZONTAL_ALIGNMENT_LEFT
+	_place(_fps, left_handed, 146.0)
+	_fps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if left_handed else HORIZONTAL_ALIGNMENT_LEFT
+
+
+## Pins a control of the given width to the right or left edge with a 24 px margin.
+func _place(control: Control, right: bool, width: float) -> void:
+	control.anchor_left = 1.0 if right else 0.0
+	control.anchor_right = control.anchor_left
+	control.offset_left = -24.0 - width if right else 24.0
+	control.offset_right = -24.0 if right else 24.0 + width
+
+
+func show_settings() -> void:
+	_pause.hide()
+	_settings.show()
+
+
+func _build_settings() -> void:
+	_settings = PanelContainer.new()
+	_settings.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.043, 0.063, 0.125, 0.97)
+	style.content_margin_left = 32.0
+	style.content_margin_right = 32.0
+	style.content_margin_top = 64.0
+	style.content_margin_bottom = 48.0
+	_settings.add_theme_stylebox_override("panel", style)
+	_settings.hide()
+	add_child(_settings)
+	var panel := SettingsPanel.new()
+	panel.closable = true
+	panel.closed.connect(func() -> void:
+		_settings.hide()
+		_pause.show())
+	_settings.add_child(panel)
 
 
 func _process(delta: float) -> void:
@@ -151,6 +191,8 @@ func set_coins(value: int) -> void:
 
 func show_pause(paused: bool) -> void:
 	_pause.visible = paused
+	if not paused:
+		_settings.hide()
 
 
 func show_result(won: bool, earned: int, total: int, text: String, stars: int, has_next: bool) -> void:
@@ -203,7 +245,7 @@ func _build_result() -> void:
 
 ## Pause menu (plan 9.1). Settings join it with the settings screen.
 func _build_pause() -> void:
-	_pause = _overlay_panel(240.0)
+	_pause = _overlay_panel(300.0)
 	var box := _pause.get_child(0) as VBoxContainer
 	var title := _label(44, RunArt.CYAN)
 	title.theme_type_variation = "TitleLabel"
@@ -216,6 +258,9 @@ func _build_pause() -> void:
 	var restart := _button("Neustart", false)
 	restart.pressed.connect(restart_pressed.emit)
 	box.add_child(restart)
+	var options := _button("Einstellungen", false)
+	options.pressed.connect(show_settings)
+	box.add_child(options)
 	var give_up := _button("Aufgeben", false)
 	give_up.pressed.connect(back_pressed.emit)
 	box.add_child(give_up)
