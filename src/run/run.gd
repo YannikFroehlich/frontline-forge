@@ -195,7 +195,9 @@ func _set_paused(paused: bool) -> void:
 	_hud.show_pause(get_tree().paused)
 
 
+## Plays the same level again, even if a win already moved the menu selection on.
 func _restart() -> void:
+	Campaign.selected = _level_id
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
@@ -763,12 +765,16 @@ func _show_result_later(won: bool) -> void:
 	await get_tree().create_timer(1.2).timeout
 	Audio.play("win" if won else "lose")
 	var has_next := won and Campaign.next_id(_level_id) != ""
+	if has_next:
+		# Back in the menu the next level is already chosen.
+		Campaign.selected = Campaign.next_id(_level_id)
 	_hud.show_result(won, _coins, int(Save.data["coins"]), "\n".join(lines), stars, has_next)
 
 
 func _next_level() -> void:
 	Campaign.selected = Campaign.next_id(_level_id)
-	_restart()
+	get_tree().paused = false
+	get_tree().reload_current_scene()
 
 
 static func _format_time(seconds: float) -> String:
