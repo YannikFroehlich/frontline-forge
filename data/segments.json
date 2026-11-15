@@ -1,0 +1,28 @@
+{
+	"_doc": "Hand-built track pieces (plan 5.1). at = metres from the segment start. Levels chain them; a level entry gate:<preset> adds a gate segment.",
+	"rest": {"length": 30, "events": []},
+	"drones_intro": {"length": 40, "events": [{"at": 20, "enemy": "drone", "count": 3, "x": 0}]},
+	"drones_left": {"length": 40, "events": [{"at": 15, "enemy": "drone", "count": 4, "x": -1.2}]},
+	"drones_right": {"length": 40, "events": [{"at": 15, "enemy": "drone", "count": 4, "x": 1.2}]},
+	"drones_wall": {"length": 40, "events": [{"at": 15, "enemy": "drone", "count": 6, "x": 0}]},
+	"drones_zigzag": {"length": 50, "events": [
+		{"at": 10, "enemy": "drone", "count": 3, "x": -1.5},
+		{"at": 25, "enemy": "drone", "count": 3, "x": 1.5},
+		{"at": 40, "enemy": "drone", "count": 3, "x": -1.5}]},
+	"drones_big": {"length": 50, "events": [{"at": 20, "enemy": "drone", "count": 10, "x": 0}]},
+	"jumper_single": {"length": 40, "events": [{"at": 20, "enemy": "jumper", "count": 1, "x": 0}]},
+	"jumper_pair": {"length": 40, "events": [{"at": 20, "enemy": "jumper", "count": 2, "x": 0}]},
+	"jumper_trio": {"length": 50, "events": [{"at": 25, "enemy": "jumper", "count": 3, "x": 0}]},
+	"tank_solo": {"length": 50, "events": [{"at": 25, "enemy": "tank", "count": 1, "x": 0}]},
+	"tank_side": {"length": 50, "events": [
+		{"at": 25, "enemy": "tank", "count": 1, "x": -1.3},
+		{"at": 30, "enemy": "drone", "count": 4, "x": 1.3}]},
+	"tank_pair": {"length": 55, "events": [{"at": 25, "enemy": "tank", "count": 2, "x": 0}]},
+	"mixed": {"length": 50, "events": [
+		{"at": 15, "enemy": "drone", "count": 6, "x": 0},
+		{"at": 35, "enemy": "jumper", "count": 1, "x": 0}]},
+	"assault": {"length": 60, "events": [
+		{"at": 10, "enemy": "drone", "count": 8, "x": 0},
+		{"at": 35, "enemy": "tank", "count": 1, "x": 0},
+		{"at": 45, "enemy": "jumper", "count": 2, "x": 0}]}
+}

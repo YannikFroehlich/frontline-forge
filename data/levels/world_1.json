@@ -1,0 +1,22 @@
+{
+	"_doc": "World 1 'Trainingsraster' (plan 5.1). Every 5th level is special, the last one has the boss. special: no_gates (no gates), rush (track 40 % faster).",
+	"id": "w1",
+	"name": "Trainingsraster",
+	"levels": [
+		{"id": "w1_l01", "segments": ["rest", "drones_intro", "gate:dmg_or_rate", "drones_left", "drones_right", "drones_intro"]},
+		{"id": "w1_l02", "segments": ["rest", "drones_left", "gate:proj_or_dmg", "drones_wall", "jumper_single", "drones_right", "drones_intro"]},
+		{"id": "w1_l03", "segments": ["rest", "drones_wall", "gate:dmg_or_bad", "jumper_single", "drones_zigzag", "gate:dmg_or_rate", "drones_big"]},
+		{"id": "w1_l04", "segments": ["rest", "drones_intro", "gate:shoot_proj", "jumper_pair", "drones_left", "drones_right", "tank_solo", "drones_wall"]},
+		{"id": "w1_l05", "special": "no_gates", "segments": ["rest", "drones_wall", "drones_zigzag", "jumper_single", "drones_big", "rest", "drones_left", "drones_right", "mixed"]},
+		{"id": "w1_l06", "segments": ["rest", "drones_zigzag", "gate:bad_or_proj", "tank_solo", "drones_wall", "gate:risk_dmg", "jumper_pair", "drones_big"]},
+		{"id": "w1_l07", "segments": ["rest", "mixed", "gate:proj_or_dmg", "tank_side", "jumper_pair", "gate:shoot_dmg", "drones_big", "drones_zigzag"]},
+		{"id": "w1_l08", "segments": ["rest", "drones_wall", "gate:rate_or_proj", "jumper_trio", "tank_solo", "gate:dmg_or_bad", "mixed", "drones_big", "tank_side"]},
+		{"id": "w1_l09", "segments": ["rest", "mixed", "gate:risk_proj", "tank_pair", "drones_zigzag", "gate:shoot_proj", "jumper_trio", "assault"]},
+		{"id": "w1_l10", "special": "rush", "segments": ["rest", "gate:big_choice", "drones_wall", "drones_zigzag", "jumper_pair", "gate:dmg_or_rate", "drones_big", "mixed", "drones_zigzag"]},
+		{"id": "w1_l11", "segments": ["rest", "drones_big", "gate:dmg_or_rate", "tank_side", "jumper_trio", "gate:risk_dmg", "assault", "drones_zigzag", "tank_pair"]},
+		{"id": "w1_l12", "segments": ["rest", "mixed", "gate:shoot_dmg", "assault", "drones_big", "gate:rate_or_proj", "jumper_trio", "tank_pair", "mixed"]},
+		{"id": "w1_l13", "segments": ["rest", "drones_zigzag", "gate:proj_or_dmg", "assault", "gate:bad_or_proj", "tank_pair", "drones_big", "gate:risk_proj", "assault", "jumper_trio"]},
+		{"id": "w1_l14", "segments": ["rest", "assault", "gate:dmg_or_bad", "drones_big", "tank_side", "gate:shoot_proj", "assault", "jumper_trio", "gate:big_choice", "assault", "tank_pair"]},
+		{"id": "w1_l15", "boss": true, "segments": ["rest", "drones_intro", "gate:dmg_or_rate", "drones_left", "drones_right", "jumper_single", "gate:proj_or_dmg", "drones_wall", "tank_solo", "gate:shoot_proj", "jumper_pair", "drones_big", "gate:risk_dmg", "tank_side", "gate:rate_or_proj", "jumper_trio", "drones_big", "tank_pair", "gate:risk_proj", "mixed", "rest"]}
+	]
+}
