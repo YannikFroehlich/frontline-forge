@@ -136,6 +136,8 @@ var _hud: RunHud
 func _ready() -> void:
 	get_tree().quit_on_go_back = false
 	_camera = RunArt.environment(self)
+	RunArt.apply_quality(self, Settings.quality())
+	Settings.changed.connect(func() -> void: RunArt.apply_quality(self, Settings.quality()))
 	_floor_mat = RunArt.track(self)
 	_pillars = RunArt.pillars(self, 26, 5.5, 13.0, 12.0)
 	_far_pillars = RunArt.pillars(self, 16, 18.0, 34.0, 30.0)
@@ -207,7 +209,8 @@ func _restart() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	var motion := event as InputEventMouseMotion
 	if motion and motion.button_mask & MOUSE_BUTTON_MASK_LEFT and _playing():
-		_target_x = clampf(_target_x + motion.relative.x * DRAG_SCALE, -TRACK_HALF, TRACK_HALF)
+		var sensitivity: float = Settings.get_value("sensitivity")
+		_target_x = clampf(_target_x + motion.relative.x * DRAG_SCALE * sensitivity, -TRACK_HALF, TRACK_HALF)
 
 
 func _process(delta: float) -> void:
@@ -575,7 +578,7 @@ func _pass_gate(side: Dictionary) -> void:
 		_stats.apply(effect)
 		lines.append(WeaponStats.describe(effect))
 	_hud.set_stats(_stats)
-	_hud.toast("\n".join(lines), _side_color(side))
+	_hud.toast(_side_symbol(side) + " " + "\n".join(lines), _side_color(side))
 	Audio.play("gate_bad" if _side_color(side) == RunArt.RED else "gate_good")
 
 
@@ -590,13 +593,18 @@ func _grow_gate(gate: Gate, side: int) -> void:
 	Audio.play("gate_grow")
 
 
+## Gate text with a shape in front, so the meaning never depends on colour alone (plan 12).
 func _side_text(side: Dictionary) -> String:
-	var lines: PackedStringArray = []
+	var lines: PackedStringArray = [_side_symbol(side)]
 	for effect: Array in side["effects"]:
 		lines.append(WeaponStats.describe(effect))
 	if side.has("grow"):
-		lines.append("▲ BESCHIESSEN")
+		lines.append("BESCHIESSEN")
 	return "\n".join(lines)
+
+
+func _side_symbol(side: Dictionary) -> String:
+	return {RunArt.GREEN: "▲", RunArt.RED: "▼", RunArt.AMBER: "◆", RunArt.CYAN: "◎"}[_side_color(side)]
 
 
 ## Green = only good, red = only bad, amber = trade-off, cyan = shootable.
@@ -796,8 +804,9 @@ func _update_scenery(delta: float) -> void:
 		if pillar.position.z > 8.0:
 			pillar.position.z -= 110.0
 	_shake = maxf(_shake - delta * 2.5, 0.0)
-	_camera.h_offset = randf_range(-1.0, 1.0) * _shake * 0.2
-	_camera.v_offset = randf_range(-1.0, 1.0) * _shake * 0.2
+	var shake := _shake * 0.2 if Settings.get_value("screen_shake") else 0.0
+	_camera.h_offset = randf_range(-1.0, 1.0) * shake
+	_camera.v_offset = randf_range(-1.0, 1.0) * shake
 
 
 ## Short slow motion for boss moments (plan 11.1). The timer ignores the time scale.

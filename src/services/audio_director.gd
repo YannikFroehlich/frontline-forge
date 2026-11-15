@@ -5,8 +5,7 @@ extends Node
 ## Every sound gets a small random pitch change so repeats do not tire the ear.
 ## Music: one looping track per situation with a soft crossfade (plan 11.4, simplified adaptive layers).
 ## Sources and licenses of the tracks are listed in docs/lizenzen.md.
-# ponytail: pitch variation instead of three recorded variants per sound, no volume settings yet.
-# The sliders come with the settings screen.
+# ponytail: pitch variation instead of three recorded variants per sound.
 
 const BUSES := {"Music": -9.0, "Weapons": -8.0, "Sfx": -5.0, "Ui": -10.0}
 const MUSIC := {
@@ -102,6 +101,15 @@ func play(id: String, pitch: float = 1.0) -> void:
 	player.stream = _streams[id]
 	player.pitch_scale = pitch * randf_range(1.0 - PITCH_SPREAD, 1.0 + PITCH_SPREAD)
 	player.play()
+
+
+## Player volume 0..1 for "master", "music" or "effects" (weapons, effects and menu sounds together).
+func set_volume(category: String, linear: float) -> void:
+	var buses: Array = {"master": ["Master"], "music": ["Music"], "effects": ["Weapons", "Sfx", "Ui"]}[category]
+	for bus: String in buses:
+		var index := AudioServer.get_bus_index(bus)
+		AudioServer.set_bus_mute(index, linear <= 0.001)
+		AudioServer.set_bus_volume_db(index, float(BUSES.get(bus, 0.0)) + linear_to_db(maxf(linear, 0.001)))
 
 
 ## Crossfades to the looping track "menu", "level" or "boss". "" fades the music out.

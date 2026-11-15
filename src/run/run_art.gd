@@ -64,6 +64,17 @@ void fragment() {
 """
 
 
+## Graphics level (plan 11.2): low turns off glow and shadows, medium only shadows.
+## Expects the "World" and "Sun" nodes that environment() creates.
+static func apply_quality(parent: Node, quality: int) -> void:
+	var world := parent.get_node_or_null("World") as WorldEnvironment
+	if world != null:
+		world.environment.glow_enabled = quality >= 1
+	var sun := parent.get_node_or_null("Sun") as DirectionalLight3D
+	if sun != null:
+		sun.shadow_enabled = quality >= 2
+
+
 ## Builds light, fog, glow, sky and camera. Returns the camera for screen shake.
 static func environment(parent: Node) -> Camera3D:
 	var env := Environment.new()
@@ -81,10 +92,12 @@ static func environment(parent: Node) -> Camera3D:
 	env.fog_light_color = Color(0.05, 0.07, 0.16)
 	env.fog_density = 0.02
 	var world := WorldEnvironment.new()
+	world.name = "World"
 	world.environment = env
 	parent.add_child(world)
 
 	var sun := DirectionalLight3D.new()
+	sun.name = "Sun"
 	sun.rotation_degrees = Vector3(-55.0, 25.0, 0.0)
 	sun.light_color = Color(0.75, 0.82, 1.0)
 	sun.light_energy = 0.7

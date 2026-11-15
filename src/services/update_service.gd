@@ -8,6 +8,8 @@ extends Node
 signal update_available(info: Dictionary)
 signal install_started
 signal failed(message: String)
+## Emitted after every check, true if a newer release was found.
+signal checked(found: bool)
 
 const LATEST_URL := "https://api.github.com/repos/YannikFroehlich/frontline-forge/releases/latest"
 const APK_PATH := "user://update.apk"
@@ -28,20 +30,20 @@ func _ready() -> void:
 
 
 ## Silent on any failure (offline, rate limit, no release): the game must not depend on it.
-func check() -> void:
+## manual: started from the settings, also shows a version the player skipped before.
+func check(manual: bool = false) -> void:
 	if OS.has_feature("dev"):
+		checked.emit(false)
 		return  # Dev builds have their own package name and are not updated from releases.
 	var response := await _fetch(LATEST_URL, ["Accept: application/vnd.github+json"])
-	if not response["ok"]:
-		return
-	var data: Variant = JSON.parse_string((response["body"] as PackedByteArray).get_string_from_utf8())
-	if not data is Dictionary:
-		return
-	var found := parse_release(data, AppVersion.current())
-	if found.is_empty() or found["version"] == _skipped_version():
+	var data: Variant = JSON.parse_string((response["body"] as PackedByteArray).get_string_from_utf8()) 			if response["ok"] else null
+	var found := parse_release(data, AppVersion.current()) if data is Dictionary else {}
+	if found.is_empty() or (found["version"] == _skipped_version() and not manual):
+		checked.emit(false)
 		return
 	info = found
 	update_available.emit(info)
+	checked.emit(true)
 
 
 func install() -> void:
